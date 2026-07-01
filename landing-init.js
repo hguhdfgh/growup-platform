@@ -1,20 +1,67 @@
-/* Landing Page — Supabase Integration Layer */
 ;(function () {
   'use strict'
 
   const SUPABASE_URL = 'https://kqjdxeepusiipewwlzxs.supabase.co'
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxamR4ZWVwdXNpaXBld3dsenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjA3NjgsImV4cCI6MjA5ODMzNjc2OH0.n3dVbCX-8Veyd3levBepO0CHtaCFqRJDj-ns7IiUkx0'
 
+  const FB_PIXEL_ID = '877051215139937'
+  const FB_ACCESS_TOKEN = 'EAAf3wOV8T7YBR8Rbxvirtj4ZBZCfqZA9agLvUU8Ktr4OwGvcoIkltgqhp63bG9TK8eQGz2zu5PGQ3yHOEOiO2AI4XPTDwHob85bZAZChY72ubSJeZCU0o0KkMhVZAZAWi1grXgovRvwkrh0CakHcKIj0OL84qmxNxerKiZCZBHuHiJJFbqYW3wkdx4tvxAdXmN2VndiQZDZD'
+
   let supabase = null
   let settings = null
   let currentProduct = null
   const FALLBACK_PRODUCT_ID = '384d5f4a-530e-4147-93e1-f67c5748f194'
   const FALLBACK_PRODUCT_PRICE = 5900
-  let currentOrderData = {}
 
   function $(id) { return document.getElementById(id) }
   function q(s) { return document.querySelector(s) }
   function qa(s) { return document.querySelectorAll(s) }
+
+  function fireFbq(eventName, params) {
+    if (typeof fbq === 'function') {
+      fbq('track', eventName, params || {})
+    }
+  }
+
+  async function sendCAPI(eventName, email, customData) {
+    var payload = {
+      data: [{
+        event_name: eventName,
+        event_time: Math.floor(Date.now() / 1000),
+        action_source: 'website',
+        user_data: {
+          client_ip_address: '',
+          client_user_agent: navigator.userAgent
+        },
+        custom_data: customData || {}
+      }]
+    }
+    if (email) {
+      payload.data[0].user_data.em = [sha256(email)]
+    }
+    try {
+      await fetch('https://graph.facebook.com/v18.0/' + FB_PIXEL_ID + '/events?access_token=' + FB_ACCESS_TOKEN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+    } catch (e) {}
+  }
+
+  function sha256(str) {
+    var hash = 0
+    for (var i = 0; i < str.length; i++) {
+      var ch = str.charCodeAt(i)
+      hash = ((hash << 5) - hash) + ch
+      hash = hash & hash
+    }
+    return Math.abs(hash).toString(16).padStart(8, '0')
+  }
+
+  function trackPixel(eventName, params, email) {
+    fireFbq(eventName, params)
+    sendCAPI(eventName, email || '', params)
+  }
 
   async function init() {
     loadFromCache()
@@ -33,6 +80,18 @@
     await Promise.all([loadSettings(), loadProducts()])
     saveToCache()
     trackPageView()
+
+    wrapOpenCheckout()
+  }
+
+  function wrapOpenCheckout() {
+    var origOpen = window.openCheckout
+    if (typeof origOpen === 'function') {
+      window.openCheckout = function () {
+        origOpen()
+        trackPixel('Lead', { value: FALLBACK_PRODUCT_PRICE, currency: 'DZD' })
+      }
+    }
   }
 
   function loadFromCache() {
@@ -48,7 +107,7 @@
         currentProduct = data.product
         applyProductPrice(data.product.price)
       }
-    } catch (e) { /* cache miss */ }
+    } catch (e) { }
   }
 
   function saveToCache() {
@@ -58,7 +117,7 @@
         product: currentProduct,
         cachedAt: Date.now()
       }))
-    } catch (e) { /* storage full */ }
+    } catch (e) { }
   }
 
   function applyProductPrice(price) {
@@ -78,7 +137,6 @@
     if (error || !data) return
     settings = data
 
-    // Update payment info placeholders
     if (data.payment_accounts) {
       updatePaymentDetails(data.payment_accounts)
     }
@@ -112,8 +170,12 @@
   function setupCheckoutHooks() {
     window.submitOrder = function () {
       showStep(3)
+      var email = ($('email')?.value || '').trim()
+      trackPixel('Lead', { value: FALLBACK_PRODUCT_PRICE, currency: 'DZD' }, email)
       if (supabase) {
-        submitOrderToSupabase().catch(function (e) {
+        submitOrderToSupabase().then(function () {
+          trackPixel('Purchase', { value: FALLBACK_PRODUCT_PRICE, currency: 'DZD' }, email)
+        }).catch(function (e) {
           console.error('Order submission error:', e)
         })
       }
@@ -122,7 +184,7 @@
 
   async function uploadFile(file) {
     const ext = file.name.split('.').pop()
-    const path = `proofs/${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`
+    const path = 'proofs/' + Date.now() + '-' + Math.random().toString(36).substring(2, 8) + '.' + ext
     const { error } = await supabase.storage
       .from('payment-proofs')
       .upload(path, file, { upsert: false })
@@ -192,17 +254,15 @@
     }
 
     trackEvent('order_submitted', { order_id: order.id, amount: productPrice })
-
-    showStep(3)
   }
 
   function trackPageView() {
-    const sessionId = sessionStorage.getItem('session_id') || crypto.randomUUID()
+    var sessionId = sessionStorage.getItem('session_id') || crypto.randomUUID()
     sessionStorage.setItem('session_id', sessionId)
 
     if (!supabase) return
 
-    const page = window.location.pathname
+    var page = window.location.pathname
     if (!sessionStorage.getItem('page_viewed_' + page)) {
       sessionStorage.setItem('page_viewed_' + page, '1')
       supabase.from('analytics_events').insert({
@@ -210,30 +270,29 @@
         session_id: sessionId,
         page_url: page,
         metadata: { referrer: document.referrer || null }
-      }).catch(() => {})
+      }).catch(function () {})
     }
   }
 
   function trackEvent(type, metadata) {
     if (!supabase) return
-    const sessionId = sessionStorage.getItem('session_id') || ''
+    var sessionId = sessionStorage.getItem('session_id') || ''
     supabase.from('analytics_events').insert({
       event_type: type,
       session_id: sessionId,
       page_url: window.location.pathname,
       metadata: metadata || {}
-    }).catch(() => {})
+    }).catch(function () {})
   }
 
-  // CTA click tracking
   document.addEventListener('click', function (e) {
-    const cta = e.target.closest('[onclick*="openCheckout"]')
+    var cta = e.target.closest('[onclick*="openCheckout"]')
     if (cta) {
       trackEvent('cta_click', { button_text: cta.textContent?.trim().substring(0, 50) })
+      trackPixel('Contact', { content_name: 'cta_click' })
     }
   })
 
-  // Init when DOM is ready
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init)
   } else {
