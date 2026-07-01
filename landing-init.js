@@ -87,13 +87,13 @@
   }
 
   function setupCheckoutHooks() {
-    const originalSubmit = window.submitOrder
     window.submitOrder = function () {
-      if (!supabase) {
-        showStep(3)
-        return
+      showStep(3)
+      if (supabase) {
+        submitOrderToSupabase().catch(function (e) {
+          console.error('Order submission error:', e)
+        })
       }
-      submitOrderToSupabase()
     }
   }
 
