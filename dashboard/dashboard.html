@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://kqjdxeepusiipewwlzxs.supabase.co https://*.supabase.co; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com; font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://kqjdxeepusiipewwlzxs.supabase.co https://*.supabase.co wss://kqjdxeepusiipewwlzxs.supabase.co https://cdn.jsdelivr.net;">
+  <title>لوحة التحكم - TikTok Agency</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="dashboard.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="i18n.js"></script>
+  <script src="supabase.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- LOGIN PAGE -->
+  <div class="page active" id="page-login">
+    <div class="login-container">
+      <div class="login-card glass-card">
+        <div class="login-logo">
+          <div class="logo-icon">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <rect width="40" height="40" rx="10" fill="var(--primary)"/>
+              <path d="M12 20C12 15.5817 15.5817 12 20 12C24.4183 12 28 15.5817 28 20C28 24.4183 24.4183 28 20 28" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="20" cy="20" r="3" fill="white"/>
+              <path d="M26 14L30 10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h1 class="brand-name">TikTok Agency</h1>
+        </div>
+        <h2 class="login-title">تسجيل الدخول إلى لوحة التحكم</h2>
+        <p class="login-subtitle">أدخل بيانات الاعتماد الخاصة بك للوصول إلى لوحة التحكم</p>
+        <form id="login-form" class="login-form">
+          <div class="form-group">
+            <label for="login-email">البريد الإلكتروني</label>
+            <input type="email" id="login-email" class="form-control" placeholder="example@domain.com" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">كلمة المرور</label>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+          </div>
+          <div id="login-error" class="login-error" style="display:none"></div>
+          <button type="submit" id="login-btn" class="btn btn-primary btn-full">
+            <span id="login-btn-text">تسجيل الدخول</span>
+            <span id="login-btn-loader" class="loading-spinner" style="display:none"></span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD LAYOUT -->
+  <div class="dashboard-layout" id="app-layout" style="display:none">
+
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-icon">
+          <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
+            <rect width="40" height="40" rx="10" fill="var(--primary)"/>
+            <path d="M12 20C12 15.5817 15.5817 12 20 12C24.4183 12 28 15.5817 28 20C28 24.4183 24.4183 28 20 28" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="20" cy="20" r="3" fill="white"/>
+            <path d="M26 14L30 10" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="sidebar-brand">TikTok Agency</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-page="page-dashboard">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>الإحصائيات</span>
+        </div>
+        <div class="nav-item" data-page="page-orders">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+          <span>الطلبات</span>
+        </div>
+        <div class="nav-item" data-page="page-customers">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>العملاء</span>
+        </div>
+        <div class="nav-item" data-page="page-products">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          <span>المنتجات</span>
+        </div>
+        <div class="nav-item" data-page="page-reviews">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>التقييمات</span>
+        </div>
+        <div class="nav-item" data-page="page-faq">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <span>الأسئلة</span>
+        </div>
+        <div class="nav-item" data-page="page-tickets">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span>التذاكر</span>
+        </div>
+        <div class="nav-item" data-page="page-notifications">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span>الإشعارات</span>
+          <span class="badge badge-danger" id="notif-badge-sidebar">0</span>
+        </div>
+        <div class="nav-item" data-page="page-coupons">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+          <span>الكوبونات</span>
+        </div>
+        <div class="nav-item" data-page="page-content">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>المحتوى</span>
+        </div>
+        <div class="nav-item" data-page="page-analytics">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>التحليلات</span>
+        </div>
+        <div class="nav-item" data-page="page-activity">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span>النشاطات</span>
+        </div>
+        <div class="nav-item" data-page="page-media">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          <span>الوسائط</span>
+        </div>
+        <div class="nav-item" data-page="page-settings">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>الإعدادات</span>
+        </div>
+        <div class="nav-item" data-page="page-profile">
+          <svg class="nav-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <span>الملف الشخصي</span>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="user-avatar" id="sidebar-avatar">
+            <img src="https://ui-avatars.com/api/?name=Admin&background=fe2c55&color=fff" alt="Admin">
+          </div>
+          <div class="user-info">
+            <span class="user-name" id="sidebar-user-name">Admin</span>
+            <span class="user-role" id="sidebar-user-email">admin@tiktok.com</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-full logout-btn" id="logout-btn" data-action="logout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>تسجيل الخروج</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="menu-toggle" id="menu-toggle" data-action="toggle-sidebar">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="search-bar" id="search-bar">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="global-search" class="search-input" placeholder="بحث...">
+          </div>
+        </div>
+        <div class="header-right">
+          <button class="header-btn" id="dark-mode-toggle" onclick="toggleDarkMode()" title="الوضع الليلي">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </button>
+          <button class="header-btn" onclick="showErrorModal()" title="الأخطاء" id="error-badge" style="display:none;background:var(--error);color:#fff;font-size:10px;font-weight:700;min-width:36px">
+            <span id="error-badge-count" style="margin:0 auto">0</span>
+          </button>
+          <button class="header-btn" data-page="page-notifications" id="notif-btn-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="notif-dot" id="notif-dot-header"></span>
+          </button>
+          <div class="user-dropdown" id="user-dropdown">
+            <button class="header-btn user-dropdown-trigger" data-action="toggle-dropdown">
+              <img src="https://ui-avatars.com/api/?name=Admin&background=fe2c55&color=fff" alt="User" class="user-avatar-sm">
+              <span class="user-name-header" id="header-user-name">Admin</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="dropdown-menu" id="dropdown-menu">
+              <div class="dropdown-item" data-page="page-profile">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span>الملف الشخصي</span>
+              </div>
+              <div class="dropdown-item" data-page="page-settings">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span>الإعدادات</span>
+              </div>
+              <div class="dropdown-divider"></div>
+              <div class="dropdown-item" data-action="logout">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <span>تسجيل الخروج</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="page-container">
+
+        <!-- DASHBOARD PAGE -->
+        <div class="page active" id="page-dashboard">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">الإحصائيات</h1>
+              <p class="page-subtitle">نظرة عامة على أداء الوكالة</p>
+            </div>
+          </div>
+          <div class="stats-grid" id="stats-grid">
+            <div class="stat-card" data-stat="total-orders">
+              <div class="stat-icon stat-icon-primary"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg></div>
+              <div class="stat-content">
+                <span class="stat-value" id="stat-total-orders">0</span>
+                <span class="stat-label">إجمالي الطلبات</span>
+              </div>
+              <span class="stat-trend trend-up" id="trend-total-orders">+0%</span>
+            </div>
+            <div class="stat-card" data-stat="active-orders">
+              <div class="stat-icon stat-icon-warning"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+              <div class="stat-content">
+                <span class="stat-value" id="stat-active-orders">0</span>
+                <span class="stat-label">الطلبات النشطة</span>
+              </div>
+              <span class="stat-trend trend-up" id="trend-active-orders">+0%</span>
+            </div>
+            <div class="stat-card" data-stat="total-customers">
+              <div class="stat-icon stat-icon-info"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+              <div class="stat-content">
+                <span class="stat-value" id="stat-total-customers">0</span>
+                <span class="stat-label">إجمالي العملاء</span>
+              </div>
+              <span class="stat-trend trend-up" id="trend-total-customers">+0%</span>
+            </div>
+            <div class="stat-card" data-stat="revenue">
+              <div class="stat-icon stat-icon-success"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+              <div class="stat-content">
+                <span class="stat-value" id="stat-revenue">0 د.ج</span>
+                <span class="stat-label">الإيرادات</span>
+              </div>
+              <span class="stat-trend trend-up" id="trend-revenue">+0%</span>
+            </div>
+          </div>
+          <div class="dashboard-cards">
+            <div class="card">
+              <div class="card-header">
+                <h3>آخر الطلبات</h3>
+                <button class="btn btn-sm btn-ghost" data-page="page-orders">عرض الكل</button>
+              </div>
+              <div class="card-body table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>رقم الطلب</th>
+                      <th>العميل</th>
+                      <th>المنتج</th>
+                      <th>المبلغ</th>
+                      <th>الحالة</th>
+                      <th>التاريخ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recent-orders-table"></tbody>
+                </table>
+                <div class="loading-spinner" id="recent-orders-loader" style="display:none"></div>
+                <div class="empty-state" id="recent-orders-empty" style="display:none">
+                  <p>لا توجد طلبات حديثة</p>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h3>أفضل المنتجات</h3>
+                <button class="btn btn-sm btn-ghost" data-page="page-products">عرض الكل</button>
+              </div>
+              <div class="card-body" id="top-products-list"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ORDERS PAGE -->
+        <div class="page" id="page-orders">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">الطلبات</h1>
+              <p class="page-subtitle">إدارة جميع طلبات الوكالة</p>
+            </div>
+            <button class="btn btn-primary" data-action="create-order" data-modal="modal-order-form">إنشاء طلب</button>
+          </div>
+          <div class="filter-bar">
+            <div class="form-group">
+              <select class="form-control" id="orders-status-filter" data-filter="status">
+                <option value="">جميع الحالات</option>
+                <option value="pending">قيد الانتظار</option>
+                <option value="active">نشط</option>
+                <option value="completed">مكتمل</option>
+                <option value="cancelled">ملغي</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <input type="text" class="form-control" id="orders-search" placeholder="بحث عن طلب...">
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>رقم الطلب</th>
+                  <th>العميل</th>
+                  <th>المنتج</th>
+                  <th>المبلغ</th>
+                  <th>الحالة</th>
+                  <th>التاريخ</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="orders-table"></tbody>
+            </table>
+            <div class="loading-spinner" id="orders-loader" style="display:none"></div>
+            <div class="empty-state" id="orders-empty" style="display:none">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+              <p>لا توجد طلبات</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ORDER DETAIL PAGE -->
+        <div class="page" id="page-order-detail">
+          <div class="page-header">
+            <div>
+              <button class="btn btn-ghost btn-sm" data-page="page-orders">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                العودة إلى الطلبات
+              </button>
+              <h1 class="page-title" id="order-detail-number">طلب #---</h1>
+            </div>
+          </div>
+          <div class="detail-grid">
+            <div class="card">
+              <div class="card-header"><h3>معلومات الطلب</h3></div>
+              <div class="card-body">
+                <div class="detail-row"><span class="detail-label">الحالة</span><span class="status-badge" id="order-detail-status"></span></div>
+                <div class="detail-row"><span class="detail-label">العميل</span><span id="order-detail-customer"></span></div>
+                <div class="detail-row"><span class="detail-label">المنتج</span><span id="order-detail-product"></span></div>
+                <div class="detail-row"><span class="detail-label">المبلغ</span><span id="order-detail-amount"></span></div>
+                <div class="detail-row"><span class="detail-label">الكمية</span><span id="order-detail-quantity"></span></div>
+                <div class="detail-row"><span class="detail-label">تاريخ الإنشاء</span><span id="order-detail-created"></span></div>
+                <div class="detail-row"><span class="detail-label">آخر تحديث</span><span id="order-detail-updated"></span></div>
+                <div class="detail-row"><span class="detail-label">طريقة الدفع</span><span id="order-detail-payment-method">—</span></div>
+                <div class="detail-row"><span class="detail-label">إثبات الدفع</span><span id="order-detail-payment-proof">—</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>ملاحظات الطلب</h3></div>
+              <div class="card-body">
+                <p id="order-detail-notes" class="text-muted">لا توجد ملاحظات</p>
+                <div class="form-group">
+                  <label>إضافة ملاحظة</label>
+                  <textarea class="form-control" id="order-detail-notes-input" rows="3" placeholder="أكتب ملاحظة..."></textarea>
+                </div>
+                <button class="btn btn-primary btn-sm" data-action="save-order-note">حفظ</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>الإجراءات</h3></div>
+              <div class="card-body">
+                <div id="order-detail-actions">
+                  <button class="btn btn-success" data-action="approve-order" style="display:none">موافقة</button>
+                  <button class="btn btn-danger" data-action="reject-order" style="display:none">رفض</button>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>الجدول الزمني</h3></div>
+              <div class="card-body">
+                <div class="timeline" id="order-timeline"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ORDER FORM PAGE -->
+        <div class="page" id="page-order-form">
+          <div class="page-header">
+            <div>
+              <button class="btn btn-ghost btn-sm" data-page="page-orders">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                العودة إلى الطلبات
+              </button>
+              <h1 class="page-title" id="order-form-title">إنشاء طلب جديد</h1>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-body">
+              <form id="order-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>العميل</label>
+                    <select class="form-control" id="order-form-customer" required></select>
+                  </div>
+                  <div class="form-group">
+                    <label>المنتج</label>
+                    <select class="form-control" id="order-form-product" required></select>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>المبلغ</label>
+                    <input type="number" class="form-control" id="order-form-amount" placeholder="0.00" required>
+                  </div>
+                  <div class="form-group">
+                    <label>الكمية</label>
+                    <input type="number" class="form-control" id="order-form-quantity" value="1" min="1" required>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>الحالة</label>
+                  <select class="form-control" id="order-form-status">
+                    <option value="pending">قيد الانتظار</option>
+                    <option value="active">نشط</option>
+                    <option value="completed">مكتمل</option>
+                    <option value="cancelled">ملغي</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>ملاحظات</label>
+                  <textarea class="form-control" id="order-form-notes" rows="3" placeholder="ملاحظات إضافية..."></textarea>
+                </div>
+                <input type="hidden" id="order-form-id">
+                <div class="form-actions">
+                  <button type="submit" class="btn btn-primary" id="order-form-submit">حفظ</button>
+                  <button type="button" class="btn btn-ghost" data-page="page-orders">إلغاء</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <!-- CUSTOMERS PAGE -->
+        <div class="page" id="page-customers">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">العملاء</h1>
+              <p class="page-subtitle">إدارة قاعدة عملاء الوكالة</p>
+            </div>
+            <button class="btn btn-primary" data-action="create-customer" data-modal="modal-customer-form">إضافة عميل</button>
+          </div>
+          <div class="filter-bar">
+            <div class="form-group">
+              <input type="text" class="form-control" id="customers-search" placeholder="بحث عن عميل...">
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>الاسم</th>
+                  <th>البريد الإلكتروني</th>
+                  <th>الهاتف</th>
+                  <th>إجمالي الطلبات</th>
+                  <th>الإجمالي</th>
+                  <th>التاريخ</th>
+                </tr>
+              </thead>
+              <tbody id="customers-table"></tbody>
+            </table>
+            <div class="loading-spinner" id="customers-loader" style="display:none"></div>
+            <div class="empty-state" id="customers-empty" style="display:none">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <p>لا يوجد عملاء</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CUSTOMER DETAIL PAGE -->
+        <div class="page" id="page-customer-detail">
+          <div class="page-header">
+            <div>
+              <button class="btn btn-ghost btn-sm" data-page="page-customers">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                العودة إلى العملاء
+              </button>
+              <h1 class="page-title" id="customer-detail-name">العميل</h1>
+            </div>
+          </div>
+          <div class="detail-grid">
+            <div class="card">
+              <div class="card-header"><h3>معلومات العميل</h3></div>
+              <div class="card-body">
+                <div class="detail-row"><span class="detail-label">الاسم</span><span id="customer-detail-fullname"></span></div>
+                <div class="detail-row"><span class="detail-label">البريد الإلكتروني</span><span id="customer-detail-email"></span></div>
+                <div class="detail-row"><span class="detail-label">الهاتف</span><span id="customer-detail-phone"></span></div>
+                <div class="detail-row"><span class="detail-label">المصدر</span><span id="customer-detail-source">—</span></div>
+                <div class="detail-row"><span class="detail-label">الوسوم</span><span id="customer-detail-tags">—</span></div>
+                <div class="detail-row"><span class="detail-label">الحالة</span><span id="customer-detail-status">—</span></div>
+                <div class="detail-row"><span class="detail-label">المدينة</span><span id="customer-detail-city">—</span></div>
+                <div class="detail-row"><span class="detail-label">إجمالي الطلبات</span><span id="customer-detail-orders-count"></span></div>
+                <div class="detail-row"><span class="detail-label">إجمالي الإنفاق</span><span id="customer-detail-total-spent"></span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>طلبات العميل</h3></div>
+              <div class="card-body table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>رقم الطلب</th>
+                      <th>المنتج</th>
+                      <th>المبلغ</th>
+                      <th>الحالة</th>
+                      <th>التاريخ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="customer-orders-table"></tbody>
+                </table>
+                <div class="empty-state" id="customer-orders-empty" style="display:none"><p>لا توجد طلبات</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PRODUCTS PAGE -->
+        <div class="page" id="page-products">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">المنتجات</h1>
+              <p class="page-subtitle">إدارة منتجات وخدمات الوكالة</p>
+            </div>
+            <button class="btn btn-primary" data-action="create-product" data-modal="modal-product-form">إضافة منتج</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>الاسم</th>
+                  <th>السعر</th>
+                  <th>الوصف</th>
+                  <th>الحالة</th>
+                  <th>الترتيب</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="products-table"></tbody>
+            </table>
+            <div class="loading-spinner" id="products-loader" style="display:none"></div>
+            <div class="empty-state" id="products-empty" style="display:none">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+              <p>لا توجد منتجات</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- REVIEWS PAGE -->
+        <div class="page" id="page-reviews">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">التقييمات</h1>
+              <p class="page-subtitle">مراجعة تقييمات العملاء</p>
+            </div>
+          </div>
+          <div class="filter-bar">
+            <div class="form-group">
+              <select class="form-control" id="reviews-status-filter">
+                <option value="">جميع التقييمات</option>
+                <option value="approved">مقبول</option>
+                <option value="rejected">غير مقبول</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <select class="form-control" id="reviews-rating-filter">
+                <option value="">جميع التقييمات</option>
+                <option value="5">5 نجوم</option>
+                <option value="4">4 نجوم</option>
+                <option value="3">3 نجوم</option>
+                <option value="2">2 نجوم</option>
+                <option value="1">نجمة</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="reviews-select-all" onchange="toggleAllReviews(this.checked)"></th>
+                  <th>العميل</th>
+                  <th>التقييم</th>
+                  <th>التعليق</th>
+                  <th>الحالة</th>
+                  <th>مثبت</th>
+                  <th>التاريخ</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="reviews-table"></tbody>
+            </table>
+            <div class="loading-spinner" id="reviews-loader" style="display:none"></div>
+            <div class="empty-state" id="reviews-empty" style="display:none">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <p>لا توجد تقييمات</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ PAGE -->
+        <div class="page" id="page-faq">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">الأسئلة الشائعة</h1>
+              <p class="page-subtitle">إدارة الأسئلة الشائعة للصفحة الرئيسية</p>
+            </div>
+            <button class="btn btn-primary" data-action="create-faq" data-modal="modal-faq-form">إضافة سؤال</button>
+          </div>
+          <div class="filter-bar">
+            <div class="form-group">
+              <select class="form-control" id="faq-category-filter">
+                <option value="">جميع التصنيفات</option>
+                <option value="general">عام</option>
+                <option value="pricing">الأسعار</option>
+                <option value="shipping">الشحن</option>
+                <option value="returns">الإرجاع</option>
+                <option value="support">الدعم</option>
+              </select>
+            </div>
+          </div>
+          <div class="faq-list" id="faq-list"></div>
+          <div class="loading-spinner" id="faq-loader" style="display:none"></div>
+          <div class="empty-state" id="faq-empty" style="display:none">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <p>لا توجد أسئلة</p>
+          </div>
+        </div>
+
+        <!-- TICKETS PAGE -->
+        <div class="page" id="page-tickets">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">التذاكر</h1>
+              <p class="page-subtitle">إدارة تذاكر الدعم الفني</p>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>الموضوع</th>
+                  <th>العميل</th>
+                  <th>الحالة</th>
+                  <th>الأولوية</th>
+                  <th>المسؤول</th>
+                  <th>التاريخ</th>
+                </tr>
+              </thead>
+              <tbody id="tickets-table"></tbody>
+            </table>
+            <div class="loading-spinner" id="tickets-loader" style="display:none"></div>
+            <div class="empty-state" id="tickets-empty" style="display:none">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <p>لا توجد تذاكر</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- TICKET DETAIL PAGE -->
+        <div class="page" id="page-ticket-detail">
+          <div class="page-header">
+            <div>
+              <button class="btn btn-ghost btn-sm" data-page="page-tickets">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                العودة إلى التذاكر
+              </button>
+              <h1 class="page-title" id="ticket-detail-subject">التذكرة</h1>
+            </div>
+          </div>
+          <div class="detail-grid">
+            <div class="card">
+              <div class="card-header"><h3>معلومات التذكرة</h3></div>
+              <div class="card-body">
+                <div class="detail-row"><span class="detail-label">الحالة</span><span class="status-badge" id="ticket-detail-status"></span></div>
+                <div class="detail-row"><span class="detail-label">الأولوية</span><span id="ticket-detail-priority"></span></div>
+                <div class="detail-row"><span class="detail-label">العميل</span><span id="ticket-detail-customer"></span></div>
+                <div class="detail-row"><span class="detail-label">المسؤول</span><span id="ticket-detail-assignee"></span></div>
+                <div class="detail-row" id="ticket-assignee-row">
+                  <span class="detail-label">تعيين مشرف</span>
+                  <span>
+                    <select id="ticket-assignee-select" class="form-control" style="width:auto;display:inline-block">
+                      <option value="">غير معين</option>
+                    </select>
+                    <button class="btn btn-sm btn-primary" onclick="assignTicketAction()">تعيين</button>
+                  </span>
+                </div>
+                <div class="detail-row"><span class="detail-label">التاريخ</span><span id="ticket-detail-date"></span></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>الوصف</h3></div>
+              <div class="card-body">
+                <p id="ticket-detail-description"></p>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>الردود</h3></div>
+              <div class="card-body" id="ticket-replies-container"></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>إضافة رد</h3></div>
+              <div class="card-body">
+                <div class="form-group">
+                  <textarea class="form-control" id="ticket-reply-input" rows="3" placeholder="أكتب ردك..."></textarea>
+                </div>
+                <button class="btn btn-primary btn-sm" data-action="send-ticket-reply">إرسال</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- NOTIFICATIONS PAGE -->
+        <div class="page" id="page-notifications">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">الإشعارات</h1>
+              <p class="page-subtitle">جميع الإشعارات والتنبيهات</p>
+            </div>
+            <button class="btn btn-sm btn-ghost" data-action="mark-all-read">تحديد الكل كمقروء</button>
+          </div>
+          <div class="filter-bar">
+            <div class="form-group">
+              <select class="form-control" id="notifications-type-filter">
+                <option value="">جميع الأنواع</option>
+                <option value="new_order">طلب جديد</option>
+                <option value="order_approved">موافقة طلب</option>
+                <option value="order_rejected">رفض طلب</option>
+                <option value="support">دعم فني</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <select class="form-control" id="notifications-read-filter">
+                <option value="">جميع الإشعارات</option>
+                <option value="unread">غير مقروء</option>
+                <option value="read">مقروء</option>
+              </select>
+            </div>
+          </div>
+          <div id="notifications-list"></div>
+          <div class="loading-spinner" id="notifications-loader" style="display:none"></div>
+          <div class="empty-state" id="notifications-empty" style="display:none">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <p>لا توجد إشعارات</p>
+          </div>
+        </div>
+
+        <!-- SETTINGS PAGE -->
+        <div class="page" id="page-settings">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">الإعدادات</h1>
+              <p class="page-subtitle">إعدادات الوكالة العامة</p>
+            </div>
+          </div>
+          <div class="settings-sections">
+            <div class="card" data-settings-section="general">
+              <div class="card-header">
+                <h3>عام</h3>
+              </div>
+              <div class="card-body" id="settings-general">
+                <div class="detail-row"><span class="detail-label">اسم الموقع</span><span id="settings-site-name">TikTok Agency</span></div>
+                <div class="detail-row"><span class="detail-label">الوصف</span><span id="settings-site-desc">وكالة تيك توك متكاملة</span></div>
+                <div class="detail-row"><span class="detail-label">الشعار</span><span id="settings-site-logo"><img src="https://ui-avatars.com/api/?name=TA&background=fe2c55&color=fff&size=40" alt="Logo"></span></div>
+                <hr style="margin:16px 0;border-color:var(--border-glass)">
+                <form id="settings-general-form">
+                  <div class="form-group"><label>اسم الشركة</label><input type="text" class="form-control" id="settings-company-name"></div>
+                  <div class="form-group"><label>رقم الهاتف</label><input type="tel" class="form-control" id="settings-phone"></div>
+                  <div class="form-group"><label>الواتساب</label><input type="tel" class="form-control" id="settings-whatsapp"></div>
+                  <div class="form-group"><label>البريد الإلكتروني</label><input type="email" class="form-control" id="settings-email"></div>
+                  <div class="form-group"><label>العنوان</label><input type="text" class="form-control" id="settings-address"></div>
+                  <button type="submit" class="btn btn-primary">حفظ الإعدادات العامة</button>
+                </form>
+              </div>
+            </div>
+            <div class="card" data-settings-section="payment">
+              <div class="card-header">
+                <h3>طرق الدفع</h3>
+              </div>
+              <div class="card-body" id="settings-payment">
+                <form id="settings-payment-form">
+                  <div class="form-group">
+                    <label>طريقة Baridimob</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                      <input type="text" class="form-control" id="settings-baridimob-label" placeholder="اسم الحساب">
+                      <input type="text" class="form-control" id="settings-baridimob-number" placeholder="الرقم">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>طريقة CCP</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                      <input type="text" class="form-control" id="settings-ccp-label" placeholder="اسم الحساب">
+                      <input type="text" class="form-control" id="settings-ccp-rib" placeholder="RIB">
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label>طريقة بنك</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                      <input type="text" class="form-control" id="settings-bank-label" placeholder="اسم البنك">
+                      <input type="text" class="form-control" id="settings-bank-account" placeholder="رقم الحساب">
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-primary">حفظ إعدادات الدفع</button>
+                </form>
+              </div>
+            </div>
+            <div class="card" data-settings-section="notifications">
+              <div class="card-header">
+                <h3>الإشعارات</h3>
+              </div>
+              <div class="card-body" id="settings-notifications">
+                <p class="text-muted">إعدادات الإشعارات قيد التطوير</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ANALYTICS PAGE -->
+        <div class="page" id="page-analytics">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">التحليلات</h1>
+              <p class="page-subtitle">تحليلات متقدمة لأداء الوكالة</p>
+            </div>
+          </div>
+          <div class="filter-bar">
+            <div class="form-group">
+              <select class="form-control" id="analytics-event-filter">
+                <option value="">جميع الأحداث</option>
+                <option value="page_view">مشاهدة صفحة</option>
+                <option value="order_created">طلب جديد</option>
+                <option value="order_completed">طلب مكتمل</option>
+                <option value="signup">اشتراك</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <input type="date" class="form-control" id="analytics-date-from">
+            </div>
+            <div class="form-group">
+              <input type="date" class="form-control" id="analytics-date-to">
+            </div>
+            <button class="btn btn-primary btn-sm" data-action="filter-analytics">تصفية</button>
+          </div>
+          <div class="loading-spinner" id="analytics-loader" style="display:none"></div>
+          <div class="stats-grid" id="analytics-stats-grid">
+            <div class="stat-card"><div class="stat-icon stat-icon-primary"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/></svg></div><div class="stat-content"><span class="stat-value" id="analytics-visitors">0</span><span class="stat-label">الزوار</span></div></div>
+            <div class="stat-card"><div class="stat-icon stat-icon-info"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div><div class="stat-content"><span class="stat-value" id="analytics-pageviews">0</span><span class="stat-label">مشاهدات الصفحات</span></div></div>
+            <div class="stat-card"><div class="stat-icon stat-icon-success"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><div class="stat-content"><span class="stat-value" id="analytics-conversions">0</span><span class="stat-label">التحويلات</span></div></div>
+            <div class="stat-card"><div class="stat-icon stat-icon-warning"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg></div><div class="stat-content"><span class="stat-value" id="analytics-bounce-rate">0%</span><span class="stat-label">معدل الارتداد</span></div></div>
+          </div>
+          <div class="dashboard-cards">
+            <div class="card"><div class="card-header"><h3>الرسوم البيانية</h3></div><div class="card-body"><div class="chart-container" id="analytics-chart-main" style="height:300px;background:var(--bg-secondary);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">مخطط التحليلات</div></div></div>
+            <div class="card"><div class="card-header"><h3>الأحداث حسب النوع</h3></div><div class="card-body"><div class="chart-container" id="analytics-chart-events" style="height:250px;background:var(--bg-secondary);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">مخطط الأحداث</div></div></div>
+          </div>
+        </div>
+
+        <!-- COUPONS PAGE -->
+        <div class="page" id="page-coupons">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">الكوبونات</h1>
+              <p class="page-subtitle">إدارة كوبونات الخصم والعروض</p>
+            </div>
+            <button class="btn btn-primary" data-action="create-coupon" data-modal="modal-coupon-form">إضافة كوبون</button>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>الكود</th>
+                  <th>الخصم</th>
+                  <th>النوع</th>
+                  <th>الحد الأقصى</th>
+                  <th>المستخدم</th>
+                  <th>تاريخ الانتهاء</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="coupons-table"></tbody>
+            </table>
+            <div class="loading-spinner" id="coupons-loader" style="display:none"></div>
+            <div class="empty-state" id="coupons-empty" style="display:none">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              <p>لا توجد كوبونات</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONTENT PAGE -->
+        <div class="page" id="page-content">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">المحتوى</h1>
+              <p class="page-subtitle">إدارة محتوى الصفحة الرئيسية</p>
+            </div>
+          </div>
+          <div class="content-sections">
+            <div class="card" data-content-section="hero">
+              <div class="card-header"><h3>القسم الرئيسي (Hero)</h3></div>
+              <div class="card-body">
+                <div class="form-group"><label>العنوان</label><input type="text" class="form-control" id="content-hero-title" placeholder="عنوان القسم"></div>
+                <div class="form-group"><label>الوصف</label><textarea class="form-control" id="content-hero-desc" rows="3" placeholder="وصف القسم"></textarea></div>
+                <button class="btn btn-primary btn-sm" data-action="save-content" data-section="hero">حفظ</button>
+              </div>
+            </div>
+            <div class="card" data-content-section="features">
+              <div class="card-header"><h3>المميزات (Features)</h3></div>
+              <div class="card-body">
+                <div class="form-group"><label>المحتوى</label><textarea class="form-control" id="content-features" rows="4" placeholder="محتوى المميزات (JSON)"></textarea></div>
+                <button class="btn btn-primary btn-sm" data-action="save-content" data-section="features">حفظ</button>
+              </div>
+            </div>
+            <div class="card" data-content-section="stats">
+              <div class="card-header"><h3>الإحصائيات (Stats)</h3></div>
+              <div class="card-body">
+                <div class="form-group"><label>المحتوى</label><textarea class="form-control" id="content-stats" rows="4" placeholder="محتوى الإحصائيات (JSON)"></textarea></div>
+                <button class="btn btn-primary btn-sm" data-action="save-content" data-section="stats">حفظ</button>
+              </div>
+            </div>
+            <div class="card" data-content-section="about">
+              <div class="card-header"><h3>من نحن (About)</h3></div>
+              <div class="card-body">
+                <div class="form-group"><label>العنوان</label><input type="text" class="form-control" id="content-about-title" placeholder="عنوان القسم"></div>
+                <div class="form-group"><label>الوصف</label><textarea class="form-control" id="content-about-desc" rows="3" placeholder="وصف القسم"></textarea></div>
+                <button class="btn btn-primary btn-sm" data-action="save-content" data-section="about">حفظ</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>معاينة المحتوى</h3></div>
+              <div class="card-body" id="content-preview">
+                <p class="text-muted">سيتم عرض معاينة المحتوى هنا</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ACTIVITY PAGE -->
+        <div class="page" id="page-activity">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">النشاطات</h1>
+              <p class="page-subtitle">سجل نشاطات الوكالة</p>
+            </div>
+          </div>
+          <div class="filter-bar">
+            <div class="form-group">
+              <select class="form-control" id="activity-actor-filter">
+                <option value="">جميع المستخدمين</option>
+                <option value="admin">مشرف</option>
+                <option value="user">مستخدم</option>
+                <option value="system">النظام</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <select class="form-control" id="activity-resource-filter">
+                <option value="">جميع المصادر</option>
+                <option value="order">طلب</option>
+                <option value="customer">عميل</option>
+                <option value="product">منتج</option>
+                <option value="ticket">تذكرة</option>
+                <option value="review">تقييم</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>المستخدم</th>
+                  <th>الإجراء</th>
+                  <th>المصدر</th>
+                  <th>المعرف</th>
+                  <th>التاريخ</th>
+                </tr>
+              </thead>
+              <tbody id="activity-table"></tbody>
+            </table>
+            <div class="loading-spinner" id="activity-loader" style="display:none"></div>
+            <div class="empty-state" id="activity-empty" style="display:none">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <p>لا توجد نشاطات</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- MEDIA PAGE -->
+        <div class="page" id="page-media">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">مكتبة الوسائط</h1>
+              <p class="page-subtitle">إدارة الصور والملفات المرفوعة</p>
+            </div>
+            <button class="btn btn-primary" onclick="document.getElementById('media-upload-input').click()">رفع ملف</button>
+            <input type="file" id="media-upload-input" accept="image/*,application/pdf" multiple style="display:none">
+          </div>
+          <div class="media-grid" id="media-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px"></div>
+          <div class="loading-spinner" id="media-loader" style="display:none"></div>
+          <div class="empty-state" id="media-empty" style="display:none">
+            <p>لا توجد ملفات</p>
+          </div>
+        </div>
+
+        <!-- PROFILE PAGE -->
+        <div class="page" id="page-profile">
+          <div class="page-header">
+            <div>
+              <h1 class="page-title">الملف الشخصي</h1>
+              <p class="page-subtitle">إدارة معلومات حسابك الشخصي</p>
+            </div>
+          </div>
+          <div class="profile-grid">
+            <div class="card">
+              <div class="card-header"><h3>الصورة الشخصية</h3></div>
+              <div class="card-body profile-avatar-section">
+                <div class="profile-avatar">
+                  <img id="profile-avatar-img" src="https://ui-avatars.com/api/?name=Admin&background=fe2c55&color=fff&size=120" alt="Avatar">
+                  <button class="btn btn-sm btn-primary" data-action="upload-avatar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    تغيير الصورة
+                  </button>
+                  <input type="file" id="avatar-upload-input" accept="image/*" style="display:none">
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>المعلومات الشخصية</h3></div>
+              <div class="card-body">
+                <form id="profile-form">
+                  <div class="form-group"><label>الاسم الكامل</label><input type="text" class="form-control" id="profile-name" required></div>
+                  <div class="form-group"><label>البريد الإلكتروني</label><input type="email" class="form-control" id="profile-email" required></div>
+                  <div class="form-group"><label>رقم الهاتف</label><input type="tel" class="form-control" id="profile-phone" placeholder="+9627XXXXXXXX"></div>
+                  <button type="submit" class="btn btn-primary">حفظ التغييرات</button>
+                </form>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h3>تغيير كلمة المرور</h3></div>
+              <div class="card-body">
+                <form id="password-form">
+                  <div class="form-group"><label>كلمة المرور الحالية</label><input type="password" class="form-control" id="password-current" required></div>
+                  <div class="form-group"><label>كلمة المرور الجديدة</label><input type="password" class="form-control" id="password-new" required></div>
+                  <div class="form-group"><label>تأكيد كلمة المرور</label><input type="password" class="form-control" id="password-confirm" required></div>
+                  <button type="submit" class="btn btn-primary">تحديث كلمة المرور</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /page-container -->
+    </main>
+  </div><!-- /dashboard-layout -->
+
+  <!-- MODALS -->
+
+  <!-- Modal: Order Form -->
+  <div class="modal-overlay" id="modal-order-form">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-order-title">إنشاء طلب</h3>
+        <button class="modal-close" data-modal="modal-order-form">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="modal-order-inner-form" onsubmit="return false">
+          <div class="form-row">
+            <div class="form-group">
+              <label>العميل</label>
+              <select class="form-control" id="modal-order-customer" required></select>
+            </div>
+            <div class="form-group">
+              <label>المنتج</label>
+              <select class="form-control" id="modal-order-product" required></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>المبلغ</label>
+              <input type="number" class="form-control" id="modal-order-amount" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label>الكمية</label>
+              <input type="number" class="form-control" id="modal-order-quantity" value="1" min="1">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>الحالة</label>
+            <select class="form-control" id="modal-order-status">
+              <option value="pending">قيد الانتظار</option>
+              <option value="approved">مقبول</option>
+              <option value="rejected">مرفوض</option>
+              <option value="delivered">تم التوصيل</option>
+              <option value="archived">مؤرشف</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ملاحظات</label>
+            <textarea class="form-control" id="modal-order-notes" rows="3"></textarea>
+          </div>
+          <input type="hidden" id="modal-order-id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-action="save-modal-order">حفظ</button>
+        <button class="btn btn-ghost" data-action="close-modal" data-modal="modal-order-form">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Customer Form -->
+  <div class="modal-overlay" id="modal-customer-form">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-customer-title">إضافة عميل</h3>
+        <button class="modal-close" data-modal="modal-customer-form">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="modal-customer-inner-form" onsubmit="return false">
+          <div class="form-group"><label>الاسم</label><input type="text" class="form-control" id="modal-customer-name" required></div>
+          <div class="form-group"><label>البريد الإلكتروني</label><input type="email" class="form-control" id="modal-customer-email" required></div>
+          <div class="form-group"><label>رقم الهاتف</label><input type="tel" class="form-control" id="modal-customer-phone"></div>
+          <div class="form-group"><label>المصدر</label><select class="form-control" id="modal-customer-source"><option value="direct">مباشر</option><option value="tiktok">تيك توك</option><option value="facebook">فيسبوك</option><option value="referral">إحالة</option></select></div>
+          <div class="form-group"><label>الحالة</label><select class="form-control" id="modal-customer-status"><option value="active">نشط</option><option value="lead">عميل محتمل</option><option value="blocked">محظور</option></select></div>
+          <div class="form-group"><label>الوسوم (مفصولة بفواصل)</label><input type="text" class="form-control" id="modal-customer-tags" placeholder="tag1, tag2, tag3"></div>
+          <input type="hidden" id="modal-customer-id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-action="save-modal-customer">حفظ</button>
+        <button class="btn btn-ghost" data-action="close-modal" data-modal="modal-customer-form">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Product Form -->
+  <div class="modal-overlay" id="modal-product-form">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-product-title">إضافة منتج</h3>
+        <button class="modal-close" data-modal="modal-product-form">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="modal-product-inner-form" onsubmit="return false">
+          <div class="form-group"><label>الاسم</label><input type="text" class="form-control" id="modal-product-name" required></div>
+          <div class="form-group">
+            <label>صور المنتج</label>
+            <input type="file" class="form-control" id="modal-product-images" accept="image/*" multiple>
+            <div id="modal-product-image-previews" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+          </div>
+          <div class="form-group"><label>السعر</label><input type="number" class="form-control" id="modal-product-price" step="0.01" required></div>
+          <div class="form-group"><label>الرابط المختصر (Slug)</label><input type="text" class="form-control" id="modal-product-slug" placeholder="auto-generated"></div>
+          <div class="form-group"><label>الوصف</label><textarea class="form-control" id="modal-product-desc" rows="3"></textarea></div>
+          <div class="form-group">
+            <label>الميزات</label>
+            <div id="modal-product-features">
+              <div class="feature-item" style="display:flex;gap:8px;margin-bottom:4px">
+                <input type="text" class="form-control feature-text" placeholder="ميزة" style="flex:1">
+                <button class="btn btn-sm btn-ghost" onclick="removeFeature(this)">✕</button>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-ghost" onclick="addFeature()" style="margin-top:4px">+ إضافة ميزة</button>
+          </div>
+          <div class="form-group"><label>فترة الضمان (شهور)</label><input type="number" class="form-control" id="modal-product-warranty" value="6"></div>
+          <div class="form-group"><label>رابط الفيديو</label><input type="text" class="form-control" id="modal-product-video-url" placeholder="https://"></div>
+          <div class="form-group"><label>الحالة</label><select class="form-control" id="modal-product-status"><option value="active">نشط</option><option value="inactive">غير نشط</option></select></div>
+          <div class="form-group" style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="modal-product-featured" style="width:auto"><label for="modal-product-featured" style="margin:0">منتج مميز</label></div>
+          <div class="form-group"><label>الترتيب</label><input type="number" class="form-control" id="modal-product-order" value="0"></div>
+          <input type="hidden" id="modal-product-id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-action="save-modal-product">حفظ</button>
+        <button class="btn btn-ghost" data-action="close-modal" data-modal="modal-product-form">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Confirm -->
+  <div class="modal-overlay" id="modal-confirm">
+    <div class="modal modal-sm">
+      <div class="modal-header">
+        <h3 id="modal-confirm-title">تأكيد</h3>
+      </div>
+      <div class="modal-body">
+        <p id="modal-confirm-message">هل أنت متأكد من هذا الإجراء؟</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" data-action="confirm-action" id="modal-confirm-btn">تأكيد</button>
+        <button class="btn btn-ghost" data-action="close-modal" data-modal="modal-confirm">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: FAQ Form -->
+  <div class="modal-overlay" id="modal-faq-form">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-faq-title">إضافة سؤال</h3>
+        <button class="modal-close" data-modal="modal-faq-form">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="modal-faq-inner-form" onsubmit="return false">
+          <div class="form-group"><label>السؤال</label><textarea class="form-control" id="modal-faq-question" rows="2" required></textarea></div>
+          <div class="form-group"><label>الإجابة</label><textarea class="form-control" id="modal-faq-answer" rows="4" required></textarea></div>
+          <div class="form-group"><label>ترتيب العرض</label><input type="number" class="form-control" id="modal-faq-order" value="0"></div>
+          <input type="hidden" id="modal-faq-id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-action="save-modal-faq">حفظ</button>
+        <button class="btn btn-ghost" data-action="close-modal" data-modal="modal-faq-form">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Coupon Form -->
+  <div class="modal-overlay" id="modal-coupon-form">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-coupon-title">إضافة كوبون</h3>
+        <button class="modal-close" data-modal="modal-coupon-form">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form id="modal-coupon-inner-form" onsubmit="return false">
+          <div class="form-row">
+            <div class="form-group"><label>الكود</label><input type="text" class="form-control" id="modal-coupon-code" required></div>
+            <div class="form-group"><label>قيمة الخصم</label><input type="number" class="form-control" id="modal-coupon-discount" step="0.01" required></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>النوع</label><select class="form-control" id="modal-coupon-type"><option value="percentage">نسبة مئوية</option><option value="fixed">قيمة ثابتة</option></select></div>
+            <div class="form-group"><label>الحد الأقصى</label><input type="number" class="form-control" id="modal-coupon-max-uses" value="100"></div>
+          </div>
+          <div class="form-group"><label>تاريخ الانتهاء</label><input type="date" class="form-control" id="modal-coupon-expiry"></div>
+          <input type="hidden" id="modal-coupon-id">
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-action="save-modal-coupon">حفظ</button>
+        <button class="btn btn-ghost" data-action="close-modal" data-modal="modal-coupon-form">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Settings Section -->
+  <div class="modal-overlay" id="modal-settings-section">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-settings-title">تعديل الإعدادات</h3>
+        <button class="modal-close" data-modal="modal-settings-section">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" id="modal-settings-body">
+        <p class="text-muted">محتويات الإعدادات سيتم تحميلها ديناميكياً</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" data-action="save-modal-settings">حفظ</button>
+        <button class="btn btn-ghost" data-action="close-modal" data-modal="modal-settings-section">إلغاء</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST CONTAINER -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>
