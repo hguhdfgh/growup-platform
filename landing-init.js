@@ -89,31 +89,10 @@
     const originalSubmit = window.submitOrder
     window.submitOrder = function () {
       if (!supabase) {
-        showStep(5)
+        showStep(3)
         return
       }
       submitOrderToSupabase()
-    }
-
-    const uploadInput = $('fileInput')
-    if (uploadInput) {
-      uploadInput.addEventListener('change', async function (e) {
-        const file = e.target.files[0]
-        if (!file) return
-        $('fileName').textContent = 'جاري الرفع...'
-        try {
-          const result = await uploadFile(file)
-          if (result) {
-            currentOrderData.payment_proof_url = result
-            $('fileName').textContent = '✓ تم رفع الملف'
-            $('submitBtn').disabled = false
-          } else {
-            $('fileName').textContent = '✗ فشل الرفع'
-          }
-        } catch {
-          $('fileName').textContent = '✗ خطأ في الرفع'
-        }
-      })
     }
   }
 
@@ -146,13 +125,9 @@
       return
     }
 
-    const selectedMethod = q('.payment-method.selected')
-    const paymentMethod = selectedMethod ? selectedMethod.dataset.method : 'baridimob'
+    const productId = currentProduct ? currentProduct.id : FALLBACK_PRODUCT_ID
+    const productPrice = currentProduct ? currentProduct.price : FALLBACK_PRODUCT_PRICE
 
-    $('submitBtn').disabled = true
-    $('submitBtn').textContent = 'جاري الإرسال...'
-
-    // Upsert customer
     const { data: customer, error: custError } = await supabase
       .from('customers')
       .upsert({
@@ -166,14 +141,9 @@
 
     if (custError || !customer?.id) {
       console.error('Customer error:', custError || 'No ID returned')
-      $('submitBtn').disabled = false
-      $('submitBtn').textContent = 'إرسال الطلب'
       alert('حدث خطأ أثناء تسجيل بياناتك. حاول مرة أخرى.')
       return
     }
-
-    const productId = currentProduct ? currentProduct.id : FALLBACK_PRODUCT_ID
-    const productPrice = currentProduct ? currentProduct.price : FALLBACK_PRODUCT_PRICE
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -184,8 +154,8 @@
         email: email,
         phone: phone,
         amount: productPrice,
-        payment_method: paymentMethod,
-        payment_proof_url: currentOrderData.payment_proof_url || null,
+        payment_method: 'baridimob',
+        payment_proof_url: null,
         status: 'pending'
       })
       .select()
@@ -193,16 +163,13 @@
 
     if (orderError) {
       console.error('Order error:', orderError)
-      $('submitBtn').disabled = false
-      $('submitBtn').textContent = 'إرسال الطلب'
       alert('حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.')
       return
     }
 
-    // Track analytics event
     trackEvent('order_submitted', { order_id: order.id, amount: productPrice })
 
-    showStep(5)
+    showStep(3)
   }
 
   function trackPageView() {
