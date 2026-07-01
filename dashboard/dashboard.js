@@ -1855,9 +1855,11 @@ function setupRealtime(){
       if(dot)dot.style.display='block';
       refreshDashboardStats();
     }));
-    trackSubscription(subscribeStats(function(){
+    trackSubscription(subscribeStats(function(table){
       var page=A.currentPage;
       if(page==='page-dashboard'||!page)refreshDashboardStats();
+      if(page==='page-orders'||page==='page-orders-archive')loadOrders();
+      if(page==='page-customers')loadCustomers();
     }));
   }catch(e){}
 }
