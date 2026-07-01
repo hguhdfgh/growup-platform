@@ -694,10 +694,13 @@ async function loadCustomers(){
 }
 
 async function deleteCustomerAction(id){
-  showConfirm('هل أنت متأكد من حذف هذا العميل؟',async function(){
-    var r=await supabase.from('customers').delete().eq('id',id);
-    if(!r.error){showToast('تم حذف العميل','success');loadCustomers()}
-    else{showToast('حدث خطأ','error')}
+  showConfirm('هل أنت متأكد من حذف هذا العميل؟ سيتم حذف جميع طلباته أيضاً.',async function(){
+    var r
+    r=await supabase.from('orders').delete().eq('customer_id',id)
+    if(r.error){showToast('حدث خطأ أثناء حذف الطلبات: '+r.error.message,'error');return}
+    r=await supabase.from('customers').delete().eq('id',id)
+    if(!r.error){showToast('تم حذف العميل وجميع طلباته','success');loadCustomers()}
+    else{showToast('حدث خطأ أثناء حذف العميل: '+r.error.message,'error')}
   })
 }
 window.deleteCustomerAction=deleteCustomerAction;
