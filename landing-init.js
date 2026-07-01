@@ -5,7 +5,7 @@
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxamR4ZWVwdXNpaXBld3dsenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjA3NjgsImV4cCI6MjA5ODMzNjc2OH0.n3dVbCX-8Veyd3levBepO0CHtaCFqRJDj-ns7IiUkx0'
 
   const FB_PIXEL_ID = '877051215139937'
-  const FB_ACCESS_TOKEN = 'EAAf3wOV8T7YBR8Rbxvirtj4ZBZCfqZA9agLvUU8Ktr4OwGvcoIkltgqhp63bG9TK8eQGz2zu5PGQ3yHOEOiO2AI4XPTDwHob85bZAZChY72ubSJeZCU0o0KkMhVZAZAWi1grXgovRvwkrh0CakHcKIj0OL84qmxNxerKiZCZBHuHiJJFbqYW3wkdx4tvxAdXmN2VndiQZDZD'
+  const CAPI_ENDPOINT = 'https://kqjdxeepusiipewwlzxs.supabase.co/functions/v1/facebook-capi'
 
   let supabase = null
   let settings = null
@@ -24,38 +24,13 @@
   }
 
   async function sendCAPI(eventName, email, customData) {
-    var payload = {
-      data: [{
-        event_name: eventName,
-        event_time: Math.floor(Date.now() / 1000),
-        action_source: 'website',
-        user_data: {
-          client_ip_address: '',
-          client_user_agent: navigator.userAgent
-        },
-        custom_data: customData || {}
-      }]
-    }
-    if (email) {
-      payload.data[0].user_data.em = [sha256(email)]
-    }
     try {
-      await fetch('https://graph.facebook.com/v18.0/' + FB_PIXEL_ID + '/events?access_token=' + FB_ACCESS_TOKEN, {
+      await fetch(CAPI_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ event_name: eventName, email: email || '', custom_data: customData || {} })
       })
     } catch (e) {}
-  }
-
-  function sha256(str) {
-    var hash = 0
-    for (var i = 0; i < str.length; i++) {
-      var ch = str.charCodeAt(i)
-      hash = ((hash << 5) - hash) + ch
-      hash = hash & hash
-    }
-    return Math.abs(hash).toString(16).padStart(8, '0')
   }
 
   function trackPixel(eventName, params, email) {
