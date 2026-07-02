@@ -52,7 +52,7 @@
     setupCheckoutHooks()
 
     if (!supabase) {
-      console.warn('Supabase client not available â€” page will use static content')
+      console.warn('Supabase client not available — page will use static content')
       return
     }
 
@@ -113,9 +113,9 @@
   }
 
   function applyProductPrice(price) {
-    var formatted = new Intl.NumberFormat('ar-DZ').format(price)
+    var formatted = price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
     qa('.price-tag, .fc-price, .final-price .amount, .order-summary .total span:last-child').forEach(function(el) {
-      el.textContent = formatted + ' Ø¯Ø¬'
+      el.textContent = formatted + ' دج'
     })
   }
 
@@ -205,7 +205,7 @@
     const phone = ($('phone')?.value || '').trim()
 
     if (!name || !email) {
-      alert('ÙŠØ±Ø¬Ù‰ Ù…Ù„Ø¡ Ø§Ù„Ø§Ø³Ù… ÙˆØ§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ')
+      alert('يرجى ملء الاسم والبريد الإلكتروني')
       return
     }
 
@@ -225,7 +225,7 @@
 
     if (custError || !customer?.id) {
       console.error('Customer error:', custError || 'No ID returned')
-      alert('Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ ØªØ³Ø¬ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§ØªÙƒ. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.')
+      alert('حدث خطأ أثناء تسجيل بياناتك. حاول مرة أخرى.')
       return
     }
 
@@ -247,7 +247,7 @@
 
     if (orderError) {
       console.error('Order error:', orderError)
-      alert('Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø¥Ø±Ø³Ø§Ù„ Ø§Ù„Ø·Ù„Ø¨. Ø­Ø§ÙˆÙ„ Ù…Ø±Ø© Ø£Ø®Ø±Ù‰.')
+      alert('حدث خطأ أثناء إرسال الطلب. حاول مرة أخرى.')
       return
     }
 
