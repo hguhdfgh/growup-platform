@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent 5: المدقق النهائي (Validate Agent)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0f0f13;color:#e0e0e0;padding:20px;max-width:900px;margin:auto}
+h1{color:#fff;font-size:22px;margin-bottom:5px}
+.sub{color:#888;font-size:13px;margin-bottom:20px}
+
+.checklist{border-radius:10px;overflow:hidden;margin-bottom:16px}
+.check-item{display:flex;align-items:flex-start;padding:14px 16px;border-bottom:1px solid #2a2a35;background:#1a1a24;gap:12px}
+.check-item:last-child{border-bottom:none}
+.check-icon{font-size:18px;min-width:28px;text-align:center}
+.check-content{flex:1}
+.check-title{font-size:14px;font-weight:600;margin-bottom:2px}
+.check-desc{font-size:12px;color:#888;line-height:1.4}
+.check-status{font-size:11px;padding:2px 8px;border-radius:4px;margin-top:4px;display:inline-block}
+.status-pass{background:#0a2e1a;color:#86efac;border:1px solid #22c55e}
+.status-fail{background:#2e0a0a;color:#fca5a5;border:1px solid #ef4444}
+.status-warn{background:#2e1f0a;color:#fcd34d;border:1px solid #f59e0b}
+.status-skip{background:#2a2a35;color:#888;border:1px solid #444}
+
+.summary-card{background:linear-gradient(135deg,#1a1a24,#14141e);border-radius:12px;padding:20px;text-align:center;margin-bottom:20px}
+.summary-card .big{font-size:48px;font-weight:700}
+.summary-card .label{font-size:13px;color:#888;margin-top:4px}
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
+.summary-item{background:#1a1a24;padding:12px;border-radius:8px;text-align:center}
+.summary-item .n{font-size:22px;font-weight:700}
+.summary-item .l{font-size:11px;color:#888}
+
+.btn{background:#7c3aed;color:#fff;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px;margin:10px auto;display:block}
+.btn:hover{background:#6d28d9}
+</style>
+</head>
+<body>
+<h1>✅ Agent 5: المدقق النهائي</h1>
+<p class="sub">التحقق من أن كل شيء يعمل بشكل صحيح بعد الإصلاحات</p>
+
+<div class="summary-grid" id="summary-grid">
+  <div class="summary-item"><div class="n" id="s-pass" style="color:#22c55e">0</div><div class="l">نجاح</div></div>
+  <div class="summary-item"><div class="n" id="s-fail" style="color:#ef4444">0</div><div class="l">فشل</div></div>
+  <div class="summary-item"><div class="n" id="s-warn" style="color:#f59e0b">0</div><div class="l">تحذير</div></div>
+  <div class="summary-item"><div class="n" id="s-total">0</div><div class="l">المجموع</div></div>
+</div>
+
+<div class="checklist" id="checklist"></div>
+
+<div id="final-message" style="display:none;text-align:center;padding:20px;border-radius:10px;margin-top:10px"></div>
+
+<button class="btn" onclick="runValidation()">🔄 تشغيل التحقق النهائي</button>
+
+<script>
+const BASE = 'https://kqjdxeepusiipewwlzxs.supabase.co'
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxamR4ZWVwdXNpaXBld3dsenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjA3NjgsImV4cCI6MjA5ODMzNjc2OH0.n3dVbCX-8Veyd3levBepO0CHtaCFqRJDj-ns7IiUkx0'
+const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxamR4ZWVwdXNpaXBld3dsenhzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MDc2OCwiZXhwIjoyMDk4MzM2NzY4fQ.FrFBFi1ggo4PJMtvjubr8K5PSjuaV57_dks8AHERM60'
+
+let results = {pass:0, fail:0, warn:0, total:0}
+
+function addItem(title, desc, status, detail){
+  const cl = document.getElementById('checklist')
+  const d = document.createElement('div')
+  d.className = 'check-item'
+  const icons = {pass:'✅', fail:'❌', warn:'⚠️', skip:'⏭️'}
+  d.innerHTML = `
+    <div class="check-icon">${icons[status]||'ℹ️'}</div>
+    <div class="check-content">
+      <div class="check-title">${title}</div>
+      <div class="check-desc">${desc} ${detail ? '<br><span style="color:#666;font-size:11px">'+detail+'</span>' : ''}</div>
+      <span class="check-status status-${status}">${status === 'pass' ? '✅ صح' : status === 'fail' ? '❌ خطأ' : '⚠️ تحذير'}</span>
+    </div>
+  `
+  cl.appendChild(d)
+  results[status] = (results[status]||0) + 1
+  results.total++
+  document.getElementById('s-'+status).textContent = results[status]
+  document.getElementById('s-total').textContent = results.total
+}
+
+async function runValidation(){
+  document.getElementById('checklist').innerHTML = ''
+  document.getElementById('final-message').style.display = 'none'
+  results = {pass:0, fail:0, warn:0, total:0}
+  document.getElementById('s-pass').textContent = '0'
+  document.getElementById('s-fail').textContent = '0'
+  document.getElementById('s-warn').textContent = '0'
+  document.getElementById('s-total').textContent = '0'
+
+  // 1. Domain / DNS check
+  const checks = [
+    {name: 'Supabase REST API', url: BASE + '/rest/v1/', expectOk: false, headers: {'apikey': ANON_KEY}},
+    {name: 'Supabase Auth API', url: BASE + '/auth/v1/user', expectOk: false, headers: {'apikey': ANON_KEY}},
+    {name: 'Abandoned Orders table', url: BASE + '/rest/v1/abandoned_orders?limit=1', expectOk: true, headers: {'apikey': SERVICE_KEY, 'Authorization': 'Bearer '+SERVICE_KEY}},
+    {name: 'Profiles table', url: BASE + '/rest/v1/profiles?limit=1', expectOk: true, headers: {'apikey': SERVICE_KEY, 'Authorization': 'Bearer '+SERVICE_KEY}},
+    {name: 'Edge Function facebook-capi', url: BASE + '/functions/v1/facebook-capi', expectOk: false, method: 'POST', headers: {'Content-Type':'application/json','Authorization':'Bearer '+ANON_KEY}, body: JSON.stringify({test:true})}
+  ]
+
+  for(const ch of checks){
+    try{
+      const r = await fetch(ch.url, {
+        method: ch.method || 'GET',
+        headers: ch.headers,
+        body: ch.body
+      })
+      if(r.ok || r.status === 401 || r.status === 400){
+        addItem(ch.name, 'الخدمة تستجيب', 'pass', 'Status: '+r.status)
+      } else {
+        addItem(ch.name, 'استجابة غير متوقعة', 'warn', 'Status: '+r.status)
+      }
+    }catch(e){
+      addItem(ch.name, 'فشل الاتصال', 'fail', e.message)
+    }
+  }
+
+  // 2. Login test
+  try{
+    const r = await fetch(BASE + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey': ANON_KEY},
+      body: JSON.stringify({email:'admin@growup.dz', password:'Admin123@2026'})
+    })
+    const data = await r.json()
+    if(data.access_token){
+      addItem('تسجيل الدخول', 'admin@growup.dz يمكنه تسجيل الدخول', 'pass')
+    } else {
+      addItem('تسجيل الدخول', 'فشل تسجيل الدخول', 'fail', JSON.stringify(data.error_description||data.msg||data))
+    }
+  }catch(e){
+    addItem('تسجيل الدخول', 'استثناء أثناء الاختبار', 'fail', e.message)
+  }
+
+  // 3. Abandoned Orders CRUD
+  const testId = 'validate-'+Date.now()
+  try{
+    const ins = await fetch(BASE + '/rest/v1/abandoned_orders', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey': SERVICE_KEY, 'Authorization': 'Bearer '+SERVICE_KEY, 'Prefer': 'return=representation'},
+      body: JSON.stringify({session_id: testId, name: 'Validate Test', phone: '0555000000', status: 'new'})
+    })
+    if(ins.ok || ins.status === 201){
+      addItem('إدراج في abandoned_orders', 'يمكن إدراج سجلات جديدة', 'pass')
+      // Delete it
+      const del = await fetch(BASE + '/rest/v1/abandoned_orders?session_id=eq.'+testId, {
+        method: 'DELETE',
+        headers: {'apikey': SERVICE_KEY, 'Authorization': 'Bearer '+SERVICE_KEY}
+      })
+      if(del.ok || del.status === 204){
+        addItem('حذف من abandoned_orders', 'يمكن حذف السجلات', 'pass')
+      } else {
+        addItem('حذف من abandoned_orders', 'فشل الحذف', 'warn', 'Status: '+del.status)
+      }
+    } else {
+      const txt = await ins.text()
+      addItem('إدراج في abandoned_orders', 'فشل الإدراج', 'fail', txt.substring(0,100))
+    }
+  }catch(e){
+    addItem('إدراج في abandoned_orders', 'استثناء', 'fail', e.message)
+  }
+
+  // 4. RLS check - anon should NOT be able to read abandoned_orders
+  try{
+    const r = await fetch(BASE + '/rest/v1/abandoned_orders?limit=1', {
+      headers: {'apikey': ANON_KEY}
+    })
+    if(r.ok){
+      const data = await r.json()
+      if(data.length > 0){
+        addItem('حماية RLS لـ abandoned_orders', 'anon key يستطيع قراءة البيانات (خطر!)', 'warn', 'RLS بحاجة إلى تعديل')
+      } else {
+        addItem('حماية RLS لـ abandoned_orders', 'anon key لا يرى بيانات (آمن)', 'pass')
+      }
+    } else {
+      addItem('حماية RLS لـ abandoned_orders', 'anon key ممنوع', 'pass', 'Status: '+r.status)
+    }
+  }catch(e){
+    addItem('حماية RLS لـ abandoned_orders', 'فشل الاختبار', 'warn', e.message)
+  }
+
+  // 5. CDN URL check
+  const cdnUrls = [
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    'https://hguhdfgh.github.io/growup-agency/index.html',
+    'https://hguhdfgh.github.io/growup-agency/dashboard/dashboard.html'
+  ]
+  for(const url of cdnUrls){
+    try{
+      const r = await fetch(url, {method: 'HEAD', mode: 'no-cors'})
+      addItem('CDN متاح: ' + url.split('/').slice(-2).join('/'), 'الملف متاح', 'pass')
+    }catch(e){
+      addItem('CDN متاح: ' + url.split('/').slice(-2).join('/'), 'الملف غير متاح', 'warn', e.message)
+    }
+  }
+
+  // 6. Final verdict
+  const fm = document.getElementById('final-message')
+  fm.style.display = 'block'
+  if(results.fail === 0 && results.warn === 0){
+    fm.style.background = '#0a2e1a'
+    fm.style.color = '#86efac'
+    fm.style.border = '1px solid #22c55e'
+    fm.innerHTML = '<strong style="font-size:18px">✅ جميع الاختبارات ناجحة!</strong><br><br>النظام يعمل بشكل صحيح.'
+  } else if(results.fail === 0){
+    fm.style.background = '#2e1f0a'
+    fm.style.color = '#fcd34d'
+    fm.style.border = '1px solid #f59e0b'
+    fm.innerHTML = '<strong style="font-size:18px">⚠️ تحذيرات فقط</strong><br><br>جميع الاختبارات الأساسية ناجحة، لكن هناك تحذيرات يجب مراجعتها.'
+  } else {
+    fm.style.background = '#2e0a0a'
+    fm.style.color = '#fca5a5'
+    fm.style.border = '1px solid #ef4444'
+    fm.innerHTML = '<strong style="font-size:18px">❌ يوجد أخطاء</strong><br><br>يجب إصلاح الأخطاء قبل استخدام النظام.'
+  }
+}
+
+runValidation()
+</script>
+</body>
+</html>

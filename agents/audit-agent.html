@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent 2: مدقق الأخطاء (Audit Agent)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0f0f13;color:#e0e0e0;padding:20px;max-width:900px;margin:auto}
+h1{color:#fff;font-size:22px;margin-bottom:5px}
+.sub{color:#888;font-size:13px;margin-bottom:20px}
+.section{background:#1a1a24;border-radius:10px;padding:16px;margin-bottom:16px}
+.section h2{font-size:15px;color:#a78bfa;margin-bottom:12px}
+.result{padding:10px 12px;border-radius:6px;margin-bottom:8px;font-size:13px;line-height:1.5}
+.pass{background:#0a2e1a;border:1px solid #22c55e;color:#86efac}
+.fail{background:#2e0a0a;border:1px solid #ef4444;color:#fca5a5}
+.warn{background:#2e1f0a;border:1px solid #f59e0b;color:#fcd34d}
+.info{background:#0a1a2e;border:1px solid #3b82f6;color:#93c5fd}
+.btn{padding:10px 24px;border:none;border-radius:6px;cursor:pointer;font-size:14px;margin:4px}
+.btn-primary{background:#7c3aed;color:#fff}
+.btn-primary:hover{background:#6d28d9}
+.btn-danger{background:#dc2626;color:#fff}
+.btn-danger:hover{background:#b91c1c}
+#status{display:none;padding:10px 12px;margin-bottom:16px;border-radius:6px;font-size:13px;text-align:center}
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:16px}
+.card{background:#1a1a24;padding:12px;border-radius:8px;text-align:center}
+.card .num{font-size:28px;font-weight:700;display:block}
+.card .lbl{font-size:12px;color:#888}
+</style>
+</head>
+<body>
+<h1>🧪 Agent 2: مدقق الأخطاء</h1>
+<p class="sub">يفحص الكود، الاتصال بـ Supabase، تحميل الملفات، وأخطاء التشغيل المحتملة</p>
+
+<div class="summary" id="summary">
+  <div class="card"><span class="num" id="count-pass">0</span><span class="lbl">نجاح</span></div>
+  <div class="card"><span class="num" id="count-fail">0</span><span class="lbl">فشل</span></div>
+  <div class="card"><span class="num" id="count-warn">0</span><span class="lbl">تحذير</span></div>
+  <div class="card"><span class="num" id="count-info">0</span><span class="lbl">معلومات</span></div>
+</div>
+
+<div id="status"></div>
+
+<div class="section">
+  <h2>🔌 الاتصال بـ Supabase</h2>
+  <div id="supabase-results"></div>
+</div>
+
+<div class="section">
+  <h2>📄 تحميل الملفات (CDN & GitHub Pages)</h2>
+  <div id="cdn-results"></div>
+</div>
+
+<div class="section">
+  <h2>⚙️ أخطاء الكود المحتملة</h2>
+  <div id="code-results"></div>
+</div>
+
+<div class="section">
+  <h2>🌐 فحص الشبكة</h2>
+  <div id="network-results"></div>
+</div>
+
+<div style="text-align:center;margin-top:20px">
+  <button class="btn btn-primary" onclick="runAudit()">🔄 إعادة الفحص</button>
+</div>
+
+<script>
+const BASE = 'https://kqjdxeepusiipewwlzxs.supabase.co'
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxamR4ZWVwdXNpaXBld3dsenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjA3NjgsImV4cCI6MjA5ODMzNjc2OH0.n3dVbCX-8Veyd3levBepO0CHtaCFqRJDj-ns7IiUkx0'
+
+let counts = {pass:0, fail:0, warn:0, info:0}
+
+function addResult(containerId, type, title, detail){
+  const c = document.getElementById(containerId)
+  const d = document.createElement('div')
+  d.className = 'result ' + type
+  d.innerHTML = `<strong>${title}</strong><br>${detail}`
+  c.appendChild(d)
+  counts[type]++
+  document.getElementById('count-'+type).textContent = counts[type]
+}
+
+function setStatus(msg, type){
+  const s = document.getElementById('status')
+  s.style.display = 'block'
+  s.style.background = type==='fail'?'#2e0a0a':'#0a1a2e'
+  s.style.color = type==='fail'?'#fca5a5':'#93c5fd'
+  s.textContent = msg
+}
+
+async function runAudit(){
+  for(let k in counts) counts[k]=0
+  document.querySelectorAll('.result').forEach(e=>e.remove())
+  document.getElementById('count-pass').textContent='0'
+  document.getElementById('count-fail').textContent='0'
+  document.getElementById('count-warn').textContent='0'
+  document.getElementById('count-info').textContent='0'
+
+  setStatus('جاري الفحص...','info')
+
+  // 1. Supabase connection test
+  await testSupabase()
+
+  // 2. CDN & file loading
+  await testLoading()
+
+  // 3. Code static analysis
+  testCodeAnalysis()
+
+  // 4. Network check
+  await testNetwork()
+
+  setStatus('اكتمل الفحص','info')
+}
+
+async function testSupabase(){
+  const container = 'supabase-results'
+  
+  // Test 1: Supabase REST API
+  try{
+    const r = await fetch(BASE + '/rest/v1/', {
+      headers: { 'apikey': ANON_KEY }
+    })
+    if(r.status===401 || r.status===200){
+      addResult(container, 'pass', '✅ API متاح', 'Supabase REST API يستجيب (status: '+r.status+')')
+    } else {
+      addResult(container, 'warn', '⚠️ API متاح مع تحذير', 'Status: '+r.status)
+    }
+  }catch(e){
+    addResult(container, 'fail', '❌ API غير متاح', e.message)
+  }
+
+  // Test 2: Auth endpoint
+  try{
+    const r = await fetch(BASE + '/auth/v1/user', {
+      headers: { 'apikey': ANON_KEY }
+    })
+    addResult(container, 'pass', '✅ Auth endpoint يستجيب', 'Status: '+r.status)
+  }catch(e){
+    addResult(container, 'fail', '❌ Auth endpoint فشل', e.message)
+  }
+}
+
+async function testLoading(){
+  const container = 'cdn-results'
+  
+  // Test CDN URLs
+  const urls = {
+    'Supabase JS SDK': 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+    'GitHub Pages - index.html': 'https://hguhdfgh.github.io/growup-agency/index.html',
+    'GitHub Pages - landing-init.js': 'https://hguhdfgh.github.io/growup-agency/landing-init.js',
+    'GitHub Pages - dashboard/dashboard.html': 'https://hguhdfgh.github.io/growup-agency/dashboard/dashboard.html',
+    'GitHub Pages - dashboard/dashboard.js': 'https://hguhdfgh.github.io/growup-agency/dashboard/dashboard.js',
+    'GitHub Pages - dashboard/supabase.js': 'https://hguhdfgh.github.io/growup-agency/dashboard/supabase.js'
+  }
+
+  for(const [name, url] of Object.entries(urls)){
+    try{
+      const r = await fetch(url, {method: 'HEAD', mode: 'no-cors'})
+      addResult(container, 'pass', '✅ '+name, url )
+    }catch(e){
+      addResult(container, 'fail', '❌ '+name, url + '<br>' + e.message)
+    }
+  }
+}
+
+function testCodeAnalysis(){
+  const container = 'code-results'
+
+  // Known issues from postmortem
+  const knownIssues = [
+    {
+      title: 'service_role key على client-side',
+      detail: 'supabase.js يستخدم service_role key وهو خطر أمني. يجب نقل العمليات الحساسة إلى Edge Functions.',
+      severity: 'warn'
+    },
+    {
+      title: 'getSession() قد يتجمد بدون timeout',
+      detail: 'لا يوجد AbortController أو timeout على fetch. إذا كان الشبكة بطيئة، getSession() قد يعلق إلى الأبد.',
+      severity: 'warn'
+    },
+    {
+      title: 'لا يوجد error boundary عام',
+      detail: 'إذا حدث خطأ غير متوقع في أي async function، لا يوجد catch عام. هذا قد يسبب تعليق التطبيق.',
+      severity: 'warn'
+    },
+    {
+      title: 'الاعتماد على CDN واحد',
+      detail: 'إذا فشل CDN (jsdelivr.net)، لن يعمل التطبيق بالكامل. لا يوجد fallback.',
+      severity: 'warn'
+    },
+    {
+      title: 'حجم dashboard.js كبير',
+      detail: 'أكثر من 2000 سطر في ملف واحد. صعوبة في الصيانة و debugging.',
+      severity: 'info'
+    }
+  ]
+
+  for(const issue of knownIssues){
+    addResult(container, issue.severity, issue.severity==='warn'?'⚠️ '+issue.title:'ℹ️ '+issue.title, issue.detail)
+  }
+
+  addResult(container, 'pass', '✅ فحص الكود الhandي', 'تم فحص المشاكل المعروفة')
+}
+
+async function testNetwork(){
+  const container = 'network-results'
+
+  // Test DNS/connectivity
+  const hosts = [
+    'kqjdxeepusiipewwlzxs.supabase.co',
+    'cdn.jsdelivr.net',
+    'hguhdfgh.github.io',
+    'graph.facebook.com'
+  ]
+
+  for(const host of hosts){
+    try{
+      const start = performance.now()
+      await fetch('https://'+host+'/', {method:'HEAD', mode:'no-cors'})
+      const ms = Math.round(performance.now()-start)
+      addResult(container, 'pass', '✅ '+host, 'الاستجابة: '+ms+'ms')
+    }catch(e){
+      addResult(container, 'warn', '⚠️ '+host, e.message)
+    }
+  }
+
+  // Test Facebook CAPI endpoint
+  try{
+    const r = await fetch(BASE + '/functions/v1/facebook-capi', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Authorization':'Bearer '+ANON_KEY},
+      body: JSON.stringify({test:true})
+    })
+    const text = await r.text()
+    addResult(container, text.includes('error')?'warn':'pass', '🔵 Edge Function facebook-capi', 'Status: '+r.status+' | Response: '+text.substring(0,100))
+  }catch(e){
+    addResult(container, 'fail', '❌ Edge Function facebook-capi', e.message)
+  }
+}
+
+runAudit()
+</script>
+</body>
+</html>

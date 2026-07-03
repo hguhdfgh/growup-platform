@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent 3: مصحح الأخطاء (Fix Agent)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0f0f13;color:#e0e0e0;padding:20px;max-width:900px;margin:auto}
+h1{color:#fff;font-size:22px;margin-bottom:5px}
+.sub{color:#888;font-size:13px;margin-bottom:20px}
+.fix-item{background:#1a1a24;border-radius:10px;padding:16px;margin-bottom:12px;border:1px solid #2a2a35}
+.fix-item h3{font-size:14px;margin-bottom:6px}
+.fix-item .status{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;margin-bottom:8px}
+.status-open{background:#2e0a0a;color:#fca5a5;border:1px solid #ef4444}
+.status-fixed{background:#0a2e1a;color:#86efac;border:1px solid #22c55e}
+.fix-item .desc{font-size:13px;color:#aaa;margin-bottom:10px;line-height:1.5}
+.fix-item .solution{font-size:12px;background:#0a0a14;padding:12px;border-radius:6px;direction:ltr;text-align:left;font-family:monospace;white-space:pre-wrap;word-break:break-all;margin-bottom:10px;display:none}
+.fix-item .btn-solution{background:#3b82f6;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px;margin-left:6px}
+.fix-item .btn-solution:hover{background:#2563eb}
+.fix-item .btn-fixed{background:#22c55e;color:#fff;border:none;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:12px}
+.fix-item .btn-fixed:hover{background:#16a34a}
+.count-bar{display:flex;height:8px;border-radius:4px;overflow:hidden;margin-bottom:16px}
+.count-bar div{transition:width 0.5s}
+.bar-fixed{background:#22c55e}
+.bar-open{background:#ef4444}
+.progress-text{text-align:center;font-size:13px;color:#888;margin-bottom:20px}
+</style>
+</head>
+<body>
+<h1>🔧 Agent 3: مصحح الأخطاء</h1>
+<p class="sub">يوجهك خطوة بخطوة لإصلاح كل مشكلة معروفة</p>
+
+<div class="count-bar" id="count-bar">
+  <div class="bar-fixed" id="bar-fixed" style="width:0%"></div>
+  <div class="bar-open" id="bar-open" style="width:100%"></div>
+</div>
+<p class="progress-text" id="progress-text">0 / 8 تم الإصلاح</p>
+
+<div id="fix-list"></div>
+
+<script>
+const fixes = [
+  {
+    id: 'supabase-cdm-fallback',
+    title: 'إضافة fallback لتحميل Supabase SDK',
+    desc: 'إذا فشل تحميل Supabase من CDN، يجب إظهار رسالة للمستخدم بدلاً من ترك الشاشة فارغة.',
+    solution: 'في dashboard.html، أضف هذا السكريبت قبل supabase.js:\n\n<script>\nwindow.__supabaseLoaded = false\nwindow.addEventListener(\'load\', function(){\n  setTimeout(function(){\n    if(!window.__supabaseLoaded){\n      document.body.innerHTML = \'<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0f0f13;color:#fff;text-align:center;padding:20px"><div><h2>خطأ في تحميل المكتبات</h2><p style="color:#888;margin:10px 0">يرجى التحقق من اتصالك بالإنترنت وتحديث الصفحة</p><button onclick="location.reload()" style="padding:10px 24px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer">تحديث الصفحة</button></div></div>\'\n    }\n  }, 5000)\n})\n</script>\n\nوفي supabase.js أضف هذا السطر بعد إنشاء client:\nwindow.__supabaseLoaded = true'
+  },
+  {
+    id: 'getsession-timeout',
+    title: 'إضافة timeout لـ getSession()',
+    desc: 'getSession() يمكن أن يتجمد إذا كان الشبكة بطيئة. يجب إضافة AbortController مع timeout 8 ثواني.',
+    solution: 'في dashboard.js، في init()، استبدل:\nvar ses=await getSession()\n\nبـ:\nvar controller = new AbortController()\nvar timeoutId = setTimeout(function(){ controller.abort() }, 8000)\ntry {\n  var ses = await getSession()\n  clearTimeout(timeoutId)\n} catch(e) {\n  clearTimeout(timeoutId)\n  showLogin()\n  showToast(\'تعذر الاتصال. تحقق من الإنترنت.\', \'error\')\n  return\n}'
+  },
+  {
+    id: 'service-role-key',
+    title: 'نقل service_role من client-side إلى Edge Function',
+    desc: 'استخدام service_role على client-side مكشوف للجميع. يجب إنشاء Edge Function للعمليات الحساسة.',
+    solution: 'ملف supabase.js:\n// إنشاء client بـ anon key فقط لـ auth\nvar supabase = window.supabase?.createClient(supabaseUrl, supabaseKey)\n\n// للعمليات الحساسة (مثل جلب abandoned orders)، استخدم Edge Function:\n// POST /functions/v1/admin-query مع JWT في الهيدر\n\nثم قم بإنشاء Edge Function جديدة تستخدم service_role داخلياً.'
+  },
+  {
+    id: 'error-boundary',
+    title: 'إضافة error boundary عام',
+    desc: 'يجب إضافة معالج أخطاء عام للمهام الغير متزامنة.',
+    solution: 'في dashboard.js، أضف في بداية الملف:\nwindow.addEventListener(\'unhandledrejection\', function(e){\n  console.error(\'Unhandled rejection:\', e.reason)\n  showLogin()\n  showToast(\'حدث خطأ غير متوقع. تم تسجيل الخروج.\', \'error\')\n})\n\nوكذلك:\nwindow.onerror = function(msg, url, line, col, err){\n  console.error(\'Global error:\', msg, err)\n  showLogin()\n  return true\n}'
+  },
+  {
+    id: 'cdn-fallback',
+    title: 'إضافة CDN fallback',
+    desc: 'إذا فشل تحميل script من CDN الأساسي، استخدم CDN احتياطي.',
+    solution: 'في dashboard.html، استبدل رابط CDN بـ:\n<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="loadFallbackCDN()"></script>\n<script>\nfunction loadFallbackCDN(){\n  var s = document.createElement(\'script\')\n  s.src = \'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js\'\n  document.head.appendChild(s)\n}\n</script>'
+  },
+  {
+    id: 'event-id-dedup',
+    title: 'إضافة event_id إلى Facebook CAPI',
+    desc: 'لمنع التكرار في Meta، كل حدث يجب أن يحتوي على event_id فريد.',
+    solution: 'في landing-init.js، في دالة sendEvent، أضف:\nevent_id: \'growup_\' + Date.now() + \'_\' + Math.random().toString(36).slice(2,8)\n\nوهذا يضمن عدم احتساب الأحداث المكررة في Meta.'
+  },
+  {
+    id: 'abandoned-pagination',
+    title: 'إضافة pagination لقائمة abandoned orders',
+    desc: 'الجدول يجلب كل البيانات دفعة واحدة. مع الوقت سيصبح بطيئاً.',
+    solution: 'في dashboard.js، في loadAbandoned():\n- استخدم range() في استعلام Supabase\n- أضف أزرار الصفحات في HTML\n- احسب العدد الإجمالي باستخدام count=\'exact\'\n\nمثال:\nvar page = A.abandonedPage || 1\nvar perPage = 50\nvar from = (page-1)*perPage\nvar to = from+perPage-1\nvar {data, count} = await supabase.from(\'abandoned_orders\').select(\'*\', {count:\'exact\'}).range(from, to)'
+  },
+  {
+    id: 'rotate-tokens',
+    title: 'تدوير GitHub token و Supabase AccessToken',
+    desc: 'المفاتيح مكشوفة في الملخص. يجب تدويرها فوراً.',
+    solution: '1. GitHub token: https://github.com/settings/tokens — أنشئ token جديد\n2. Supabase AccessToken: https://supabase.com/dashboard/account/tokens — أنشئ token جديد\n3. استبدل القيم في الملخص والملفات المحلية\n\n⚠️ لا تدفع المفاتيح إلى GitHub أبداً.'
+  }
+]
+
+let fixed = 0
+
+function render(){
+  const list = document.getElementById('fix-list')
+  list.innerHTML = ''
+  fixes.forEach(f => {
+    const isFixed = localStorage.getItem('fix-' + f.id) === 'true'
+    const div = document.createElement('div')
+    div.className = 'fix-item'
+    div.innerHTML = `
+      <span class="status ${isFixed?'status-fixed':'status-open'}">${isFixed?'✅ تم الإصلاح':'❌ مفتوح'}</span>
+      <h3>${f.title}</h3>
+      <p class="desc">${f.desc}</p>
+      <button class="btn-solution" onclick="toggleSolution('${f.id}')">📄 عرض الحل</button>
+      <button class="btn-fixed" onclick="markFixed('${f.id}')">${isFixed?'🔄 إعادة الفتح':'✅ تم الإصلاح'}</button>
+      <div class="solution" id="sol-${f.id}">${f.solution}</div>
+    `
+    list.appendChild(div)
+    if(isFixed) fixed++
+  })
+  updateProgress()
+}
+
+function toggleSolution(id){
+  const el = document.getElementById('sol-'+id)
+  el.style.display = el.style.display === 'block' ? 'none' : 'block'
+}
+
+function markFixed(id){
+  const current = localStorage.getItem('fix-' + id) === 'true'
+  localStorage.setItem('fix-' + id, !current)
+  if(current) fixed--; else fixed++
+  render()
+}
+
+function updateProgress(){
+  const total = fixes.length
+  document.getElementById('bar-fixed').style.width = (fixed/total*100) + '%'
+  document.getElementById('bar-open').style.width = ((total-fixed)/total*100) + '%'
+  document.getElementById('progress-text').textContent = fixed + ' / ' + total + ' تم الإصلاح'
+}
+
+render()
+</script>
+</body>
+</html>

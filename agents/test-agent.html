@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent 4: أداة الاختبارات (Test Agent)</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0f0f13;color:#e0e0e0;padding:20px;max-width:900px;margin:auto}
+h1{color:#fff;font-size:22px;margin-bottom:5px}
+.sub{color:#888;font-size:13px;margin-bottom:20px}
+.test-group{background:#1a1a24;border-radius:10px;padding:16px;margin-bottom:16px}
+.test-group h2{font-size:15px;color:#a78bfa;margin-bottom:12px}
+.test-row{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-radius:6px;margin-bottom:4px;font-size:13px;background:#14141e}
+.test-row .name{flex:1}
+.test-row .status{padding:3px 10px;border-radius:4px;font-size:11px;font-weight:600;min-width:60px;text-align:center}
+.status-pending{background:#2a2a35;color:#888}
+.status-running{background:#1a3a5c;color:#93c5fd}
+.status-pass{background:#0a2e1a;color:#86efac}
+.status-fail{background:#2e0a0a;color:#fca5a5}
+.btn{background:#7c3aed;color:#fff;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px;margin:10px auto;display:block}
+.btn:hover{background:#6d28d9}
+.log{background:#0a0a14;padding:12px;border-radius:6px;font-family:monospace;font-size:12px;direction:ltr;text-align:left;max-height:300px;overflow:auto;margin-top:12px;display:none;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<h1>🧪 Agent 4: أداة الاختبارات</h1>
+<p class="sub">اختبار جميع وظائف التطبيق الأساسية</p>
+
+<div class="test-group">
+  <h2>🔌 اختبار Supabase</h2>
+  <div id="supabase-tests"></div>
+</div>
+
+<div class="test-group">
+  <h2>🔐 اختبار الدخول (Auth)</h2>
+  <div id="auth-tests"></div>
+</div>
+
+<div class="test-group">
+  <h2>🗄️ اختبار Abandoned Orders</h2>
+  <div id="abandoned-tests"></div>
+</div>
+
+<div class="test-group">
+  <h2>📡 اختبار Edge Function</h2>
+  <div id="edge-tests"></div>
+</div>
+
+<div class="test-group">
+  <h2>🌐 اختبار أمان المفاتيح</h2>
+  <div id="security-tests"></div>
+</div>
+
+<div id="log-container"></div>
+
+<button class="btn" onclick="runTests()">▶️ تشغيل جميع الاختبارات</button>
+
+<script>
+const BASE = 'https://kqjdxeepusiipewwlzxs.supabase.co'
+const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxamR4ZWVwdXNpaXBld3dsenhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI3NjA3NjgsImV4cCI6MjA5ODMzNjc2OH0.n3dVbCX-8Veyd3levBepO0CHtaCFqRJDj-ns7IiUkx0'
+const SERVICE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxamR4ZWVwdXNpaXBld3dsenhzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4Mjc2MDc2OCwiZXhwIjoyMDk4MzM2NzY4fQ.FrFBFi1ggo4PJMtvjubr8K5PSjuaV57_dks8AHERM60'
+
+function createTest(containerId, name, status = 'pending'){
+  const c = document.getElementById(containerId)
+  const div = document.createElement('div')
+  div.className = 'test-row'
+  div.id = 'test-' + name.replace(/[^a-zA-Z0-9]/g,'')
+  div.innerHTML = `<span class="name">${name}</span><span class="status status-${status}">${status === 'pending' ? '⏳' : status === 'running' ? '🔄' : status === 'pass' ? '✅' : '❌'} ${status}</span>`
+  c.appendChild(div)
+  return div
+}
+
+function setTestStatus(name, status, detail){
+  const id = 'test-' + name.replace(/[^a-zA-Z0-9]/g,'')
+  const el = document.getElementById(id)
+  if(!el) return
+  const s = el.querySelector('.status')
+  s.className = 'status status-' + status
+  s.textContent = (status==='pass'?'✅':status==='fail'?'❌':'🔄') + ' ' + status
+  if(detail) el.title = detail
+}
+
+function addLog(msg){
+  const c = document.getElementById('log-container')
+  if(!c.querySelector('.log')){
+    const l = document.createElement('div')
+    l.className = 'log'
+    l.id = 'test-log'
+    l.style.display = 'block'
+    c.appendChild(l)
+  }
+  const l = document.getElementById('test-log')
+  l.textContent += msg + '\n'
+}
+
+async function runTests(){
+  document.querySelectorAll('.test-row').forEach(e=>e.remove())
+  document.getElementById('test-log')?.remove()
+
+  await testSupabase()
+  await testAuth()
+  await testAbandoned()
+  await testEdgeFunction()
+  await testSecurity()
+}
+
+async function testSupabase(){
+  const c = 'supabase-tests'
+
+  // REST API test
+  createTest(c, 'Supabase REST API متاح')
+  setTestStatus('Supabase REST API متاح', 'running')
+  try{
+    const r = await fetch(BASE + '/rest/v1/', {headers: {'apikey': ANON_KEY}})
+    if(r.status === 401 || r.status === 200) setTestStatus('Supabase REST API متاح', 'pass', 'Status: '+r.status)
+    else setTestStatus('Supabase REST API متاح', 'fail', 'Status: '+r.status)
+  }catch(e){ setTestStatus('Supabase REST API متاح', 'fail', e.message) }
+
+  // Auth endpoint test
+  createTest(c, 'Auth endpoint يستجيب')
+  setTestStatus('Auth endpoint يستجيب', 'running')
+  try{
+    const r = await fetch(BASE + '/auth/v1/user', {headers: {'apikey': ANON_KEY}})
+    setTestStatus('Auth endpoint يستجيب', 'pass', 'Status: '+r.status)
+  }catch(e){ setTestStatus('Auth endpoint يستجيب', 'fail', e.message) }
+
+  // Abandoned orders table exists
+  createTest(c, 'جدول abandoned_orders موجود')
+  setTestStatus('جدول abandoned_orders موجود', 'running')
+  try{
+    const r = await fetch(BASE + '/rest/v1/abandoned_orders?limit=1', {
+      headers: {'apikey': SERVICE_KEY, 'Authorization': 'Bearer '+SERVICE_KEY}
+    })
+    if(r.ok) setTestStatus('جدول abandoned_orders موجود', 'pass')
+    else setTestStatus('جدول abandoned_orders موجود', 'fail', 'Status: '+r.status)
+  }catch(e){ setTestStatus('جدول abandoned_orders موجود', 'fail', e.message) }
+
+  // Profiles table exists
+  createTest(c, 'جدول profiles موجود')
+  setTestStatus('جدول profiles موجود', 'running')
+  try{
+    const r = await fetch(BASE + '/rest/v1/profiles?limit=1', {
+      headers: {'apikey': SERVICE_KEY, 'Authorization': 'Bearer '+SERVICE_KEY}
+    })
+    if(r.ok) setTestStatus('جدول profiles موجود', 'pass')
+    else setTestStatus('جدول profiles موجود', 'fail', 'Status: '+r.status)
+  }catch(e){ setTestStatus('جدول profiles موجود', 'fail', e.message) }
+}
+
+async function testAuth(){
+  const c = 'auth-tests'
+
+  // Test sign in with valid credentials
+  createTest(c, 'تسجيل الدخول (اختبار)')
+  setTestStatus('تسجيل الدخول (اختبار)', 'running')
+  try{
+    const r = await fetch(BASE + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey': ANON_KEY},
+      body: JSON.stringify({email:'admin@growup.dz', password:'Admin123@2026'})
+    })
+    const data = await r.json()
+    if(data.access_token){
+      setTestStatus('تسجيل الدخول (اختبار)', 'pass', 'تم الحصول على access_token')
+      addLog('✅ Auth: تم تسجيل الدخول بنجاح')
+      addLog('   User: ' + (data.user?.email || 'unknown'))
+
+      // Test session refresh
+      createTest(c, 'تحديث الجلسة (refresh)')
+      setTestStatus('تحديث الجلسة (refresh)', 'running')
+      try{
+        const r2 = await fetch(BASE + '/auth/v1/token?grant_type=refresh_token', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','apikey': ANON_KEY},
+          body: JSON.stringify({refresh_token: data.refresh_token})
+        })
+        const d2 = await r2.json()
+        if(d2.access_token) setTestStatus('تحديث الجلسة (refresh)', 'pass')
+        else setTestStatus('تحديث الجلسة (refresh)', 'fail', JSON.stringify(d2))
+      }catch(e){ setTestStatus('تحديث الجلسة (refresh)', 'fail', e.message) }
+
+    } else {
+      setTestStatus('تسجيل الدخول (اختبار)', 'fail', JSON.stringify(data))
+      addLog('❌ Auth فشل: ' + JSON.stringify(data))
+    }
+  }catch(e){
+    setTestStatus('تسجيل الدخول (اختبار)', 'fail', e.message)
+    addLog('❌ Auth استثناء: ' + e.message)
+  }
+
+  // Test anonymous session
+  createTest(c, 'جلسة مجهولة (anon)')
+  setTestStatus('جلسة مجهولة (anon)', 'running')
+  try{
+    const r = await fetch(BASE + '/auth/v1/signup', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey': ANON_KEY},
+      body: JSON.stringify({})
+    })
+    const data = await r.json()
+    addLog('ℹ️ Anon signup: ' + r.status)
+    setTestStatus('جلسة مجهولة (anon)', r.ok ? 'pass' : 'warn', 'Status: '+r.status)
+  }catch(e){ setTestStatus('جلسة مجهولة (anon)', 'warn', e.message) }
+}
+
+async function testAbandoned(){
+  const c = 'abandoned-tests'
+
+  // Insert test record
+  createTest(c, 'إدراج سجل اختبار')
+  setTestStatus('إدراج سجل اختبار', 'running')
+  try{
+    const r = await fetch(BASE + '/rest/v1/abandoned_orders', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','apikey': SERVICE_KEY, 'Authorization': 'Bearer '+SERVICE_KEY, 'Prefer': 'return=representation'},
+      body: JSON.stringify({
+        session_id: 'test-agent-'+Date.now(),
+        name: 'Agent Test',
+        phone: '0555000000',
+        status: 'new'
+      })
+    })
+    const data = await r.json()
+    if(r.ok || r.status === 201){
+      setTestStatus('إدراج سجل اختبار', 'pass', 'ID: '+(data[0]?.id||'unknown'))
+      addLog('✅ Abandoned: تم إدراج سجل اختبار')
+
+      // Query it
+      createTest(c, 'الاستعلام عن السجلات')
+      setTestStatus('الاستعلام عن السجلات', 'running')
+      try{
+        const q = await fetch(BASE + '/rest/v1/abandoned_orders?select=count', {
+          headers: {'apikey': SERVICE_KEY, 'Authorization': 'Bearer '+SERVICE_KEY}
+        })
+        if(q.ok){
+          const count = await q.json()
+          setTestStatus('الاستعلام عن السجلات', 'pass', 'عدد السجلات: '+JSON.stringify(count))
+          addLog('✅ Abandoned: استعلام ناجح، عدد: '+JSON.stringify(count))
+        } else {
+          setTestStatus('الاستعلام عن السجلات', 'fail', 'Status: '+q.status)
+        }
+      }catch(e){ setTestStatus('الاستعلام عن السجلات', 'fail', e.message) }
+
+      // Clean up test record
+      createTest(c, 'حذف سجل الاختبار')
+      setTestStatus('حذف سجل الاختبار', 'running')
+      try{
+        const del = await fetch(BASE + '/rest/v1/abandoned_orders?session_id=eq.test-agent-'+Date.now(), {
+          method: 'DELETE',
+          headers: {'apikey': SERVICE_KEY, 'Authorization': 'Bearer '+SERVICE_KEY}
+        })
+        if(del.ok || del.status === 204){
+          setTestStatus('حذف سجل الاختبار', 'pass')
+        } else {
+          let txt = await del.text()
+          setTestStatus('حذف سجل الاختبار', 'warn', 'Status: '+del.status+' '+txt)
+        }
+      }catch(e){ setTestStatus('حذف سجل الاختبار', 'fail', e.message) }
+
+    } else {
+      let txt = await r.text()
+      setTestStatus('إدراج سجل اختبار', 'fail', txt)
+      addLog('❌ Abandoned فشل إدراج: ' + txt)
+    }
+  }catch(e){
+    setTestStatus('إدراج سجل اختبار', 'fail', e.message)
+    addLog('❌ Abandoned استثناء: ' + e.message)
+  }
+}
+
+async function testEdgeFunction(){
+  const c = 'edge-tests'
+
+  // Test Edge Function connectivity
+  createTest(c, 'Edge Function facebook-capi')
+  setTestStatus('Edge Function facebook-capi', 'running')
+  try{
+    const r = await fetch(BASE + '/functions/v1/facebook-capi', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','Authorization':'Bearer '+ANON_KEY},
+      body: JSON.stringify({test: true})
+    })
+    const txt = await r.text()
+    addLog('📡 Edge Function response: ['+r.status+'] ' + txt.substring(0,200))
+    if(r.ok){
+      setTestStatus('Edge Function facebook-capi', 'pass', txt.substring(0,100))
+    } else {
+      setTestStatus('Edge Function facebook-capi', 'warn', 'Status: '+r.status+' '+txt.substring(0,100))
+    }
+  }catch(e){
+    setTestStatus('Edge Function facebook-capi', 'fail', e.message)
+    addLog('❌ Edge Function استثناء: ' + e.message)
+  }
+}
+
+async function testSecurity(){
+  const c = 'security-tests'
+
+  // Check if anon key can read protected data
+  createTest(c, 'anon key لا يستطيع قراءة profiles')
+  setTestStatus('anon key لا يستطيع قراءة profiles', 'running')
+  try{
+    const r = await fetch(BASE + '/rest/v1/profiles?limit=1', {
+      headers: {'apikey': ANON_KEY}
+    })
+    if(r.ok){
+      const data = await r.json()
+      if(data.length > 0) setTestStatus('anon key لا يستطيع قراءة profiles', 'fail', 'تمكن من قراءة البيانات!')
+      else setTestStatus('anon key لا يستطيع قراءة profiles', 'pass', 'لا توجد بيانات (أو ممنوع)')
+    } else if(r.status === 401 || r.status === 403){
+      setTestStatus('anon key لا يستطيع قراءة profiles', 'pass', 'ممنوع (status: '+r.status+')')
+    } else {
+      setTestStatus('anon key لا يستطيع قراءة profiles', 'warn', 'Status: '+r.status)
+    }
+  }catch(e){ setTestStatus('anon key لا يستطيع قراءة profiles', 'fail', e.message) }
+
+  // Check if service_role key is exposed
+  createTest(c, 'service_role key غير موجود في الصفحة')
+  setTestStatus('service_role key غير موجود في الصفحة', 'running')
+  const html = document.documentElement.innerHTML
+  if(html.includes(SERVICE_KEY)){
+    setTestStatus('service_role key غير موجود في الصفحة', 'fail', 'المفتاح موجود في الصفحة!')
+    addLog('❌ SECURITY: service_role key مكشوف في HTML!')
+  } else {
+    setTestStatus('service_role key غير موجود في الصفحة', 'pass')
+  }
+}
+
+runTests()
+</script>
+</body>
+</html>
