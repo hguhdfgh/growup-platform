@@ -45,8 +45,11 @@ window.addEventListener('unhandledrejection',function(e){_capErr(e.reason?.messa
 async function init(){
   var hash=location.hash.replace('#','')||'dashboard';
   bindGlobalEvents();
+  var loadingMsg=$('loading-message');
+  if(loadingMsg)loadingMsg.textContent='جاري التحقق من الجلسة...';
   var ses=await getSession();
   if(ses.data){
+    if(loadingMsg)loadingMsg.textContent='جاري تحميل بيانات المستخدم...';
     var u=await getCurrentUser();
     if(u.data){
       A.user=u.data;
@@ -59,6 +62,13 @@ async function init(){
       loadDarkModePreference();
       setupGlobalSearch();
       setupKeyboardShortcuts();
+      startSessionRefresh();
+      onAuthChange(function(event,session){
+        if(event==='SIGNED_OUT'||(!session&&A.user)){
+          A.user=null;A.session=null;
+          showLogin();
+        }
+      });
     }else{
       await signOut();
       showLogin();
@@ -87,7 +97,13 @@ function checkSessionExpiry() {
 }
 setInterval(checkSessionExpiry, 60000)
 
+function hideLoading(){
+  var lp=$('page-loading');
+  if(lp)lp.classList.remove('active');
+}
+
 function showLogin(){
+  hideLoading();
   $('page-login').classList.add('active');
   $('app-layout').style.display='none';
   A.user=null;
@@ -95,6 +111,7 @@ function showLogin(){
 }
 
 function showApp(){
+  hideLoading();
   $('page-login').classList.remove('active');
   $('app-layout').style.display='flex';
   if(A.user){
@@ -2061,7 +2078,7 @@ async function handleLogout(){
 window.handleLogout=handleLogout;
 
 // ── Realtime ──
-function setupRealtime(){
+async function setupRealtime(){
   try{
     unsubscribeAll();
     trackSubscription(subscribeNotifications(function(n){

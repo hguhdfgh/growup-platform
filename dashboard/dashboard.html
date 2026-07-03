@@ -16,8 +16,14 @@
 </head>
 <body>
 
+  <!-- LOADING SCREEN -->
+  <div class="page active" id="page-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg-deep);flex-direction:column;gap:16px">
+    <div class="loading-spinner" style="padding:0"></div>
+    <p style="color:var(--text-tertiary);font-size:13px" id="loading-message">جاري التحميل...</p>
+  </div>
+
   <!-- LOGIN PAGE -->
-  <div class="page active" id="page-login">
+  <div class="page" id="page-login">
     <div class="login-container">
       <div class="login-card glass-card">
         <div class="login-logo">
