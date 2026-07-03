@@ -47,7 +47,14 @@ async function init(){
   bindGlobalEvents();
   var loadingMsg=$('loading-message');
   if(loadingMsg)loadingMsg.textContent='جاري التحقق من الجلسة...';
+  var fallbackTimer=setTimeout(function(){
+    if($('page-loading')?.classList.contains('active')){
+      showLogin();
+      showToast('تعذر الاتصال بالخادم. تحقق من اتصالك بالإنترنت.','error');
+    }
+  },15000);
   var ses=await getSession();
+  clearTimeout(fallbackTimer);
   if(ses.data){
     if(loadingMsg)loadingMsg.textContent='جاري تحميل بيانات المستخدم...';
     var u=await getCurrentUser();
@@ -99,7 +106,7 @@ setInterval(checkSessionExpiry, 60000)
 
 function hideLoading(){
   var lp=$('page-loading');
-  if(lp)lp.classList.remove('active');
+  if(lp){lp.classList.remove('active');lp.style.display='none'}
 }
 
 function showLogin(){
