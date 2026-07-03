@@ -146,6 +146,7 @@ function navigateTo(pageId,params){
   else if(pageId==='page-reviews'){loadReviews()}
   else if(pageId==='page-faq'){loadFaq()}
   else if(pageId==='page-tickets'){loadTickets()}
+  else if(pageId==='page-abandoned'){loadAbandoned()}
   else if(pageId==='page-notifications'){loadNotifications()}
   else if(pageId==='page-settings'){loadSettings()}
   else if(pageId==='page-analytics'){loadAnalytics()}
@@ -1089,6 +1090,207 @@ async function markAllRead(){
   if(!r.error){showToast('تم تحديد الكل كمقروء','success');loadNotifications()}
 }
 
+// ── Abandoned Orders ──
+async function loadAbandoned(){
+  showLoader('abandoned-loader');hideEmpty('abandoned-empty');
+  var tbody=$('abandoned-table');
+  if(!tbody){hideLoader('abandoned-loader');return}
+  try{
+    var statusFilter=$('abandoned-status-filter')?.value||'';
+    var search=$('abandoned-search')?.value||'';
+    var q=supabase.from('abandoned_orders').select('*',{count:'exact'}).order('updated_at',{ascending:false});
+    if(statusFilter)q=q.eq('status',statusFilter);
+    if(search){
+      var term='%'+search+'%';
+      q=q.or('customer_name.ilike.'+term+',phone.ilike.'+term);
+    }
+    var r=await q;
+    hideLoader('abandoned-loader');
+    if(!r.data||r.data.length===0){showEmpty('abandoned-empty');tbody.innerHTML='';updateAbandonedStats([]);return}
+    hideEmpty('abandoned-empty');
+    updateAbandonedStats(r.data);
+
+    var statusOptions=['new','contacted','waiting','recovered','lost'];
+    var statusLabels={new:'جديد',contacted:'تم الاتصال',waiting:'قيد الانتظار',recovered:'مسترد',lost:'ضائع'};
+    var statusColors={new:'badge-pending',contacted:'badge-open',waiting:'badge-archived',recovered:'badge-approved',lost:'badge-rejected'};
+
+    tbody.innerHTML=r.data.map(function(a){
+      var name=sanitizeHTML(a.customer_name||'—');
+      var phone=sanitizeHTML(a.phone||'—');
+      var pname=sanitizeHTML(a.product_name||'—');
+      var price=fmtCurr(a.product_price||0);
+      var pct=a.completion_pct||0;
+      var pctColor=pct<33?'var(--error)':pct<66?'var(--warning)':'var(--success)';
+      var updated=fmtDate(a.updated_at);
+      var dd='<select class="form-control form-control-sm" style="width:110px;display:inline-block" onchange="updateAbandonedStatus(\''+a.id+'\',this.value)">'+
+        statusOptions.map(function(s){return '<option value="'+s+'"'+(a.status===s?' selected':'')+'>'+(statusLabels[s]||s)+'</option>'}).join('')+
+        '</select>';
+      var waLink=phone?'https://wa.me/'+encodeURIComponent(phone.replace(/[^0-9]/g,'')):'#';
+      var callLink=phone?'tel:'+encodeURIComponent(phone):'#';
+      return '<tr>'+
+        '<td class="cell-primary">'+name+'</td>'+
+        '<td dir="ltr" class="text-right">'+phone+'</td>'+
+        '<td>'+pname+'</td>'+
+        '<td class="font-english">'+price+'</td>'+
+        '<td><div style="display:flex;align-items:center;gap:6px"><div style="flex:1;height:6px;background:var(--bg-glass);border-radius:3px;overflow:hidden;min-width:40px"><div style="height:100%;width:'+pct+'%;background:'+pctColor+';border-radius:3px"></div></div><span style="font-size:10px;font-weight:600;color:var(--text-tertiary)">'+pct+'%</span></div></td>'+
+        '<td>'+dd+'</td>'+
+        '<td>'+updated+'</td>'+
+        '<td><div class="cell-action">'+
+          '<a href="'+waLink+'" target="_blank" rel="noopener" class="btn btn-sm btn-primary" style="text-decoration:none;padding:4px 8px;font-size:10px" onclick="event.stopPropagation();trackAbandonedAction(\''+a.id+'\',\'whatsapp\')">واتساب</a>'+
+          '<a href="'+callLink+'" class="btn btn-sm btn-ghost" style="text-decoration:none;padding:4px 8px;font-size:10px" onclick="event.stopPropagation();trackAbandonedAction(\''+a.id+'\',\'call\')">اتصال</a>'+
+          '<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();editAbandonedModal(\''+a.id+'\')" style="padding:4px 8px;font-size:10px">تعديل</button>'+
+          '<button class="btn btn-sm btn-success" onclick="event.stopPropagation();convertAbandoned(\''+a.id+'\')" style="padding:4px 8px;font-size:10px">تحويل</button>'+
+          '<button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();deleteAbandonedAction(\''+a.id+'\')" style="padding:4px 8px;font-size:10px">حذف</button>'+
+        '</div></td></tr>'
+    }).join('');
+  }catch(e){hideLoader('abandoned-loader')}
+}
+
+function updateAbandonedStats(data){
+  if(!data||!data.length){
+    if($('abandoned-total'))$('abandoned-total').textContent='0';
+    if($('abandoned-new'))$('abandoned-new').textContent='0';
+    if($('abandoned-contacted'))$('abandoned-contacted').textContent='0';
+    if($('abandoned-recovered'))$('abandoned-recovered').textContent='0';
+    if($('abandoned-badge-sidebar'))$('abandoned-badge-sidebar').textContent='0';
+    return
+  }
+  var total=data.length;
+  var newCount=data.filter(function(a){return a.status==='new'}).length;
+  var contactedCount=data.filter(function(a){return a.status==='contacted'}).length;
+  var recoveredCount=data.filter(function(a){return a.status==='recovered'}).length;
+  if($('abandoned-total'))$('abandoned-total').textContent=total;
+  if($('abandoned-new'))$('abandoned-new').textContent=newCount;
+  if($('abandoned-contacted'))$('abandoned-contacted').textContent=contactedCount;
+  if($('abandoned-recovered'))$('abandoned-recovered').textContent=recoveredCount;
+  if($('abandoned-badge-sidebar'))$('abandoned-badge-sidebar').textContent=newCount;
+}
+
+async function updateAbandonedStatus(id,status){
+  try{
+    var {error}=await supabase.from('abandoned_orders').update({status:status,updated_at:new Date().toISOString()}).eq('id',id);
+    if(!error){showToast('تم تحديث الحالة','success');loadAbandoned()}
+    else{showToast('حدث خطأ','error')}
+  }catch(e){showToast('حدث خطأ','error')}
+}
+window.updateAbandonedStatus=updateAbandonedStatus;
+
+async function trackAbandonedAction(id,action){
+  try{
+    var {data:record}=await supabase.from('abandoned_orders').select('*').eq('id',id).single();
+    if(record){
+      var attempts=(record.recovery_attempts||0)+1;
+      await supabase.from('abandoned_orders').update({recovery_attempts:attempts,last_contact_date:new Date().toISOString(),status:record.status==='new'?'contacted':record.status,updated_at:new Date().toISOString()}).eq('id',id);
+      if(record.status==='new'){
+        showToast('تم تسجيل محاولة الاتصال','success');
+        loadAbandoned();
+      }
+    }
+  }catch(e){}
+}
+window.trackAbandonedAction=trackAbandonedAction;
+
+async function editAbandonedModal(id){
+  try{
+    var {data:record}=await supabase.from('abandoned_orders').select('*').eq('id',id).single();
+    if(!record){showToast('السجل غير موجود','error');return}
+    var modal=document.createElement('div');modal.className='modal-overlay open';modal.style.cssText='display:flex;z-index:9999';
+    modal.onclick=function(e){if(e.target===modal)modal.remove()};
+    modal.innerHTML='<div class="modal" style="max-width:500px;max-height:90vh;transform:none">'+
+      '<div class="modal-header"><h3>تعديل الطلب المتروك</h3><button class="modal-close" onclick="this.closest(\'.modal-overlay\').remove()">✕</button></div>'+
+      '<div class="modal-body">'+
+      '<div class="form-group"><label>الاسم</label><input class="form-control" id="edit-ab-name" value="'+esc(record.customer_name||'')+'"></div>'+
+      '<div class="form-group"><label>البريد</label><input class="form-control" id="edit-ab-email" value="'+esc(record.email||'')+'"></div>'+
+      '<div class="form-group"><label>الهاتف</label><input class="form-control" id="edit-ab-phone" value="'+esc(record.phone||'')+'"></div>'+
+      '<div class="form-group"><label>الملاحظات</label><textarea class="form-control" id="edit-ab-notes" rows="3">'+esc(record.notes||'')+'</textarea></div>'+
+      '<div class="form-group"><label>الموظف المسؤول</label><input class="form-control" id="edit-ab-employee" value="'+esc(record.assigned_employee||'')+'"></div>'+
+      '</div>'+
+      '<div class="modal-footer">'+
+      '<button class="btn btn-primary" onclick="saveAbandonedEdit(\''+id+'\')">حفظ</button>'+
+      '<button class="btn btn-ghost" onclick="this.closest(\'.modal-overlay\').remove()">إلغاء</button></div></div>';
+    document.body.appendChild(modal);
+  }catch(e){showToast('حدث خطأ','error')}
+}
+window.editAbandonedModal=editAbandonedModal;
+
+async function saveAbandonedEdit(id){
+  var data={
+    customer_name:$('edit-ab-name')?.value||'',
+    email:$('edit-ab-email')?.value||'',
+    phone:$('edit-ab-phone')?.value||'',
+    notes:$('edit-ab-notes')?.value||'',
+    assigned_employee:$('edit-ab-employee')?.value||'',
+    updated_at:new Date().toISOString()
+  };
+  try{
+    var {error}=await supabase.from('abandoned_orders').update(data).eq('id',id);
+    if(!error){showToast('تم الحفظ','success');document.querySelector('.modal-overlay.open')?.remove();loadAbandoned()}
+    else{showToast('حدث خطأ','error')}
+  }catch(e){showToast('حدث خطأ','error')}
+}
+window.saveAbandonedEdit=saveAbandonedEdit;
+
+async function convertAbandoned(id){
+  try{
+    var {data:record}=await supabase.from('abandoned_orders').select('*').eq('id',id).single();
+    if(!record){showToast('السجل غير موجود','error');return}
+    showConfirm('تحويل هذا السجل إلى طلب؟ سيتم فتح نموذج الطلب ببياناته.',async function(){
+      var productId=record.product_id||'';
+      var cr=await getCustomers({search:record.customer_name||record.email,pageSize:1});
+      var customerId='';
+      if(cr.data&&cr.data.length){
+        customerId=cr.data[0].id;
+      }else{
+        var createR=await supabase.from('customers').insert({full_name:record.customer_name||'',email:record.email||'',phone:record.phone||'',source:'abandoned_recovery'}).select().single();
+        if(createR.data)customerId=createR.data.id;
+      }
+      if(customerId){
+        await supabase.from('orders').insert({customer_id:customerId,product_id:productId||null,customer_name:record.customer_name||'',email:record.email||'',phone:record.phone||'',amount:record.product_price||0,status:'pending'});
+        await supabase.from('abandoned_orders').update({status:'recovered',updated_at:new Date().toISOString()}).eq('id',id);
+        showToast('تم تحويل الطلب المتروك إلى طلب جديد','success');
+        loadAbandoned();
+        navigateTo('page-orders');
+      }else{showToast('فشل إنشاء العميل','error')}
+    });
+  }catch(e){showToast('حدث خطأ','error')}
+}
+window.convertAbandoned=convertAbandoned;
+
+async function deleteAbandonedAction(id){
+  showConfirm('هل أنت متأكد من حذف هذا السجل؟',async function(){
+    try{
+      var {error}=await supabase.from('abandoned_orders').delete().eq('id',id);
+      if(!error){showToast('تم الحذف','success');loadAbandoned()}
+      else{showToast('حدث خطأ','error')}
+    }catch(e){showToast('حدث خطأ','error')}
+  })
+}
+window.deleteAbandonedAction=deleteAbandonedAction;
+
+async function exportAbandonedCSV(){
+  var r=await supabase.from('abandoned_orders').select('*').order('updated_at',{ascending:false});
+  if(!r.data||!r.data.length){showToast('لا توجد بيانات للتصدير','error');return}
+  var headers=['العميل','البريد','الهاتف','المنتج','المبلغ','الإكمال','الحالة','الملاحظات','المسؤول','آخر تحديث'];
+  var statusLabels={new:'جديد',contacted:'تم الاتصال',waiting:'قيد الانتظار',recovered:'مسترد',lost:'ضائع'};
+  var rows=r.data.map(function(a){
+    return [
+      a.customer_name||'',
+      a.email||'',
+      a.phone||'',
+      a.product_name||'',
+      a.product_price||0,
+      (a.completion_pct||0)+'%',
+      statusLabels[a.status]||a.status,
+      a.notes||'',
+      a.assigned_employee||'',
+      a.updated_at||''
+    ]
+  });
+  exportToCSV(headers,rows,'abandoned_orders_export.csv');
+  showToast('تم تصدير البيانات','success');
+}
+window.exportAbandonedCSV=exportAbandonedCSV;
+
 // ── Settings ──
 async function loadSettings(){
   try{
@@ -1666,6 +1868,7 @@ function bindGlobalEvents(){
     else if(action==='save-content'){saveContentSection(target.getAttribute('data-section'))}
     else if(action==='save-modal-settings'){saveModalSettings()}
     else if(action==='filter-analytics'){loadAnalytics()}
+    else if(action==='export-abandoned'){exportAbandonedCSV()}
     else if(action==='upload-avatar'){$('avatar-upload-input')?.click()}
   });
 
@@ -1801,6 +2004,15 @@ function bindGlobalEvents(){
   var nrf=$('notifications-read-filter');
   if(ntf)ntf.addEventListener('change',loadNotifications);
   if(nrf)nrf.addEventListener('change',loadNotifications);
+
+  // Abandoned filters
+  var asf=$('abandoned-status-filter');
+  var asr=$('abandoned-search');
+  if(asf)asf.addEventListener('change',loadAbandoned);
+  if(asr){
+    var abTimer;
+    asr.addEventListener('input',function(){clearTimeout(abTimer);abTimer=setTimeout(loadAbandoned,400)})
+  }
 }
 
 async function saveOrderNote(){
@@ -1862,7 +2074,12 @@ function setupRealtime(){
       if(page==='page-dashboard'||!page)refreshDashboardStats();
       if(page==='page-orders'||page==='page-orders-archive')loadOrders();
       if(page==='page-customers')loadCustomers();
+      if(page==='page-abandoned')loadAbandoned();
     }));
+    try{
+      var abSub=supabase.channel('abandoned-realtime').on('postgres_changes',{event:'*',schema:'public',table:'abandoned_orders'},function(){if(A.currentPage==='page-abandoned')loadAbandoned()}).subscribe();
+      trackSubscription(abSub);
+    }catch(e){}
   }catch(e){}
 }
 
@@ -2087,6 +2304,9 @@ window.markAllRead=markAllRead;
 window.setupRealtime=setupRealtime;
 window.deleteMediaAction=deleteMediaAction;
 window.assignTicketAction=assignTicketAction;
+window.loadAbandoned=loadAbandoned;
+window.updateAbandonedStats=updateAbandonedStats;
+window.exportAbandonedCSV=exportAbandonedCSV;
 window.toggleDarkMode=toggleDarkMode;
 window.loadDarkModePreference=loadDarkModePreference;
 window.setupGlobalSearch=setupGlobalSearch;

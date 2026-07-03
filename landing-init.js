@@ -13,6 +13,10 @@
   const FALLBACK_PRODUCT_ID = '384d5f4a-530e-4147-93e1-f67c5748f194'
   const FALLBACK_PRODUCT_PRICE = 5900
 
+  const DRAFT_DEBOUNCE_MS = 800
+  let draftTimer = null
+  let draftId = null
+
   function $(id) { return document.getElementById(id) }
   function q(s) { return document.querySelector(s) }
   function qa(s) { return document.querySelectorAll(s) }
@@ -62,6 +66,7 @@
 
     wrapOpenCheckout()
     wrapNextStep()
+    setupDraftAutoSave()
   }
 
   function wrapOpenCheckout() {
@@ -70,6 +75,7 @@
       window.openCheckout = function () {
         origOpen()
         trackPixel('InitiateCheckout', { value: getProductPrice(), currency: 'DZD' })
+        saveDraft()
       }
     }
   }
@@ -82,6 +88,7 @@
           trackPixel('AddPaymentInfo', { value: getProductPrice(), currency: 'DZD' })
         }
         origNext()
+        saveDraft()
       }
     }
   }
@@ -164,6 +171,72 @@
     })
   }
 
+  function getSessionId() {
+    var id = sessionStorage.getItem('session_id')
+    if (!id) {
+      id = crypto.randomUUID()
+      sessionStorage.setItem('session_id', id)
+    }
+    return id
+  }
+
+  function getFormData() {
+    return {
+      session_id: getSessionId(),
+      customer_name: ($('fullName')?.value || '').trim(),
+      email: ($('email')?.value || '').trim(),
+      phone: ($('phone')?.value || '').trim(),
+      product_id: currentProduct ? currentProduct.id : FALLBACK_PRODUCT_ID,
+      product_name: currentProduct ? (currentProduct.name || '') : '',
+      product_price: currentProduct ? currentProduct.price : FALLBACK_PRODUCT_PRICE,
+      current_step: typeof currentStep !== 'undefined' ? currentStep : 1,
+      completion_pct: typeof currentStep !== 'undefined' ? Math.min(currentStep * 33, 99) : 0,
+      city: ($('city')?.value || '').trim()
+    }
+  }
+
+  async function saveDraft() {
+    if (!supabase) return
+    if (draftTimer) clearTimeout(draftTimer)
+    draftTimer = setTimeout(async function () {
+      var data = getFormData()
+      if (!data.customer_name && !data.email && !data.phone) return
+      try {
+        var result
+        if (draftId) {
+          var { data: updated, error } = await supabase
+            .from('abandoned_orders')
+            .update(data)
+            .eq('id', draftId)
+            .select()
+          if (!error && updated && updated[0]) draftId = updated[0].id
+        } else {
+          var { data: inserted, error } = await supabase
+            .from('abandoned_orders')
+            .insert(data)
+            .select()
+          if (!error && inserted && inserted[0]) draftId = inserted[0].id
+        }
+      } catch (e) {}
+    }, DRAFT_DEBOUNCE_MS)
+  }
+
+  async function deleteDraft() {
+    if (!supabase || !draftId) return
+    try {
+      await supabase.from('abandoned_orders').delete().eq('id', draftId)
+      draftId = null
+    } catch (e) {}
+  }
+
+  function setupDraftAutoSave() {
+    var fields = ['fullName', 'email', 'phone', 'city']
+    fields.forEach(function (id) {
+      var el = $(id)
+      if (el) el.addEventListener('input', saveDraft)
+    })
+  }
+
   function setupCheckoutHooks() {
     window.submitOrder = function () {
       showStep(3)
@@ -171,10 +244,13 @@
       trackPixel('Lead', { value: FALLBACK_PRODUCT_PRICE, currency: 'DZD' }, email)
       if (supabase) {
         submitOrderToSupabase().then(function () {
+          deleteDraft()
           trackPixel('Purchase', { value: FALLBACK_PRODUCT_PRICE, currency: 'DZD' }, email)
         }).catch(function (e) {
           console.error('Order submission error:', e)
         })
+      } else {
+        deleteDraft()
       }
     }
   }
