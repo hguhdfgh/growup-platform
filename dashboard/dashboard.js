@@ -2350,4 +2350,6 @@ window.setupKeyboardShortcuts=setupKeyboardShortcuts;
 window.exportToCSV=exportToCSV;
 window.exportCSV=exportCSV;
 
+init();
+
 })();
