@@ -2131,6 +2131,7 @@ async function setupRealtime(){
         '<td>'+fmtDate(a.updated_at)+'</td></tr>'
     }).join('');
   }catch(e){hideLoader('recent-abandoned-loader')}
+  }catch(e){}
 }
 
 
